@@ -5,6 +5,11 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --primary: #f07d00; /* Softer Navand Orange */
+  --primary-dark: #d66e00;
+  --primary-light: #ffa94d;
+  --secondary: #2b4bf2; /* Navand Blue */
+  --secondary-dark: #1f3acc;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -17,5 +22,87 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+/* Navand theme overrides */
+.bg-primary {
+  background-color: var(--primary);
+}
+
+.bg-primary-dark {
+  background-color: var(--primary-dark);
+}
+
+.bg-primary-light {
+  background-color: var(--primary-light);
+}
+
+.bg-secondary {
+  background-color: var(--secondary);
+}
+
+.bg-secondary-dark {
+  background-color: var(--secondary-dark);
+}
+
+.text-primary {
+  color: var(--primary);
+}
+
+.text-secondary {
+  color: var(--secondary);
+}
+
+/* Sidebar specific styles */
+.from-primary {
+  --tw-gradient-from: var(--primary);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.to-primary-dark {
+  --tw-gradient-to: var(--primary-dark);
+}
+
+/* Override existing theme colors */
+.bg-green-500,
+.bg-green-600,
+.bg-emerald-500,
+.text-emerald-500,
+.text-emerald-600 {
+  background-color: var(--primary);
+  color: var(--primary);
+}
+
+.bg-emerald-100 {
+  background-color: color-mix(in srgb, var(--primary) 12%, white);
+}
+
+.dark .bg-emerald-900 {
+  background-color: color-mix(in srgb, var(--primary) 25%, black);
+}
+
+.bg-blue-500,
+.text-blue-500 {
+  background-color: var(--secondary);
+  color: var(--secondary);
+}
+
+/* Activity indicators */
+.bg-emerald-100.dark\:bg-emerald-900 {
+  background-color: color-mix(in srgb, var(--primary) 12%, white);
+}
+
+.dark .bg-emerald-100.dark\:bg-emerald-900 {
+  background-color: color-mix(in srgb, var(--primary) 25%, black);
+}
+
+/* Shadow enhancement for active items */
+.shadow-lg {
+  --tw-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --tw-shadow-colored: 0 10px 15px -3px var(--tw-shadow-color),
+    0 4px 6px -4px var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000),
+    var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
