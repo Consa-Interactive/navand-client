@@ -1,162 +1,175 @@
 "use client";
 
 import { useState } from "react";
+import { Eye, EyeOff, Loader2, ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { Eye, EyeOff } from "lucide-react";
-import { TermsAndPrivacyModals } from "@/components/legal/TermsAndPrivacy";
+import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    phoneNumber: "",
+    password: "",
+  });
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Registration failed");
+      }
+
+      // Redirect to login page after successful registration
+      router.push("/login");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-8 rounded-2xl bg-white p-6 shadow-lg dark:bg-gray-900 sm:p-8">
-        {/* Header */}
-        <div className="text-center">
-          <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">
-            Create an account
-          </h2>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Join us today and get started
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50/50 dark:bg-gray-900/50 p-4 sm:p-8">
+      <div className="w-full max-w-md">
+        {/* Logo and Title */}
+        <div className="text-center mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            Create an Account
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400">
+            Join Navand Express to start shopping
           </p>
         </div>
 
-        {/* Form */}
-        <form className="mt-8 space-y-6">
-          <div className="space-y-4">
-            <div>
+        {/* Registration Form */}
+        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm p-6 sm:p-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Name Input */}
+            <div className="space-y-2">
               <label
-                htmlFor="fullName"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                htmlFor="name"
+                className="text-sm font-medium text-gray-700 dark:text-gray-200"
               >
                 Full Name
               </label>
               <input
-                id="fullName"
-                name="fullName"
+                id="name"
                 type="text"
-                autoComplete="name"
                 required
-                className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-500 focus:border-orange-500 focus:outline-none focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 sm:text-sm"
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+                className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200"
                 placeholder="Enter your full name"
               />
             </div>
 
-            <div>
+            {/* Phone Number Input */}
+            <div className="space-y-2">
               <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                htmlFor="phoneNumber"
+                className="text-sm font-medium text-gray-700 dark:text-gray-200"
               >
-                Email
+                Phone Number
               </label>
               <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
+                id="phoneNumber"
+                type="tel"
                 required
-                className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-500 focus:border-orange-500 focus:outline-none focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 sm:text-sm"
-                placeholder="Enter your email"
+                value={formData.phoneNumber}
+                onChange={(e) =>
+                  setFormData({ ...formData, phoneNumber: e.target.value })
+                }
+                className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200"
+                placeholder="+964 XXX XXX XXXX"
               />
             </div>
 
-            <div>
+            {/* Password Input */}
+            <div className="space-y-2">
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                className="text-sm font-medium text-gray-700 dark:text-gray-200"
               >
                 Password
               </label>
-              <div className="relative mt-1">
+              <div className="relative">
                 <input
                   id="password"
-                  name="password"
                   type={showPassword ? "text" : "password"}
-                  autoComplete="new-password"
                   required
-                  className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-500 focus:border-orange-500 focus:outline-none focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 sm:text-sm"
-                  placeholder="Create a password"
+                  value={formData.password}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
+                  className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200"
+                  placeholder="Create a strong password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 >
                   {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
+                    <EyeOff className="w-4 h-4" />
                   ) : (
-                    <Eye className="h-4 w-4" />
+                    <Eye className="w-4 h-4" />
                   )}
                 </button>
               </div>
             </div>
 
-            <div>
-              <label
-                htmlFor="confirmPassword"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+            {/* Error Message */}
+            {error && (
+              <p className="text-sm text-red-500 dark:text-red-400">{error}</p>
+            )}
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full px-4 py-2.5 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-xl transition-colors duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  Create Account
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+
+            {/* Login Link */}
+            <p className="text-center text-sm text-gray-500 dark:text-gray-400">
+              Already have an account?{" "}
+              <Link
+                href="/login"
+                className="text-primary hover:text-primary/80 font-medium"
               >
-                Confirm Password
-              </label>
-              <div className="relative mt-1">
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  autoComplete="new-password"
-                  required
-                  className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-500 focus:border-orange-500 focus:outline-none focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 sm:text-sm"
-                  placeholder="Confirm your password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center">
-            <input
-              id="terms"
-              name="terms"
-              type="checkbox"
-              required
-              className="h-4 w-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-800"
-            />
-            <label
-              htmlFor="terms"
-              className="ml-2 block text-sm text-gray-700 dark:text-gray-300"
-            >
-              I agree to the <TermsAndPrivacyModals />
-            </label>
-          </div>
-
-          <button
-            type="submit"
-            className="flex w-full justify-center rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 dark:bg-orange-500 dark:hover:bg-orange-400"
-          >
-            Create Account
-          </button>
-
-          <p className="text-center text-sm text-gray-600 dark:text-gray-400">
-            Already have an account?{" "}
-            <Link
-              href="/login"
-              className="font-medium text-orange-600 hover:text-orange-500 dark:text-orange-400 dark:hover:text-orange-300"
-            >
-              Sign in
-            </Link>
-          </p>
-        </form>
+                Sign in
+              </Link>
+            </p>
+          </form>
+        </div>
       </div>
     </div>
   );

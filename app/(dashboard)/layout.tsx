@@ -17,7 +17,7 @@ export default function DashboardLayout({
       {/* Mobile menu button */}
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="fixed left-4 top-4 z-50 rounded-lg bg-white p-2 shadow-lg dark:bg-gray-800 lg:hidden"
+        className="fixed left-4 top-3 z-50 rounded-lg bg-white p-2 dark:bg-gray-800 lg:hidden"
       >
         {isMobileMenuOpen ? (
           <X className="h-6 w-6" />

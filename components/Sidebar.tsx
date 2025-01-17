@@ -1,24 +1,27 @@
 "use client";
 
+import { useApp } from "@/providers/AppProvider";
 import {
   Home,
   Users,
   Settings,
-  BarChart2,
-  Folder,
-  Calendar,
   Package,
   ChevronRight,
-  Menu,
-  X,
+  User,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
-export default function Sidebar() {
+interface SidebarProps {
+  onMobileClose?: () => void;
+}
+
+export default function Sidebar({ onMobileClose }: SidebarProps) {
   const pathname = usePathname();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const { user } = useApp();
+
   const [isMounted, setIsMounted] = useState(false);
 
   // Handle mounting to avoid hydration mismatch
@@ -28,8 +31,10 @@ export default function Sidebar() {
 
   // Close mobile menu on path change
   useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [pathname]);
+    if (onMobileClose) {
+      onMobileClose();
+    }
+  }, [pathname, onMobileClose]);
 
   const menuCategories = [
     {
@@ -37,42 +42,32 @@ export default function Sidebar() {
       items: [
         { icon: Home, label: "Dashboard", href: "/" },
         { icon: Package, label: "Orders", href: "/orders" },
+        // { icon: MapPin, label: "Routes", href: "/routes" }, // TODO: Add routes
+        // { icon: CreditCard, label: "Payments", href: "/payments" }, // TODO: Add payments
       ],
     },
     {
       name: "Management",
       items: [
-        { icon: Users, label: "Users", href: "/users" },
-        { icon: Folder, label: "Projects", href: "/projects" },
+        { icon: Users, label: "Users", href: "/users" }, // TODO: this should be only for admins
+        // { icon: Folder, label: "Projects", href: "/projects" }, // TODO: Add projects
       ],
     },
     {
       name: "Tools",
       items: [
-        { icon: Calendar, label: "Calendar", href: "/calendar" },
-        { icon: BarChart2, label: "Analytics", href: "/analytics" },
+        // { icon: Calendar, label: "Calendar", href: "/calendar" },
+        // { icon: BarChart2, label: "Analytics", href: "/analytics" }, // TODO: Add analytics
+        { icon: User, label: "Profile", href: "/profile" },
         { icon: Settings, label: "Settings", href: "/settings" },
       ],
     },
   ];
 
-  // Mobile menu toggle button
-  const MobileMenuButton = () => (
-    <button
-      onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-      className="lg:hidden fixed top-3 left-4 z-50 p-2 rounded-lg bg-gray-900 text-gray-200 hover:bg-gray-800 transition-colors"
-      aria-label="Toggle Menu"
-    >
-      {isMobileMenuOpen ? (
-        <X className="w-5 h-5" />
-      ) : (
-        <Menu className="w-5 h-5" />
-      )}
-    </button>
-  );
+  if (!isMounted) return null;
 
-  const sidebarContent = (
-    <nav className="h-full flex flex-col relative">
+  return (
+    <nav className="h-full flex flex-col relative bg-gray-900 text-gray-200">
       {/* Logo Section with enhanced styling */}
       <div className="p-6 border-b border-gray-800 backdrop-blur-sm bg-gray-900/50">
         <h1 className="text-xl font-bold flex items-center">
@@ -142,43 +137,12 @@ export default function Sidebar() {
               <Users className="w-5 h-5 text-gray-300" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-200">John Doe</p>
-              <p className="text-xs text-gray-500">Administrator</p>
+              <p className="text-sm font-medium text-gray-200">{user?.name}</p>
+              <p className="text-xs text-gray-500">{user?.role}</p>
             </div>
           </div>
         </div>
       </div>
     </nav>
-  );
-
-  if (!isMounted) return null;
-
-  return (
-    <>
-      <MobileMenuButton />
-
-      {/* Mobile Overlay */}
-      {isMobileMenuOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside
-        className={`
-          fixed lg:fixed inset-y-0 left-0 z-40
-          w-64 bg-gray-900 text-gray-200
-          transform transition-transform duration-300 ease-in-out
-          ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}
-          lg:translate-x-0
-        `}
-      >
-        {/* Subtle Pattern Overlay */}
-        <div className="absolute inset-0 opacity-5 bg-[radial-gradient(circle_at_1px_1px,#fff_1px,transparent_1px)] bg-[size:24px_24px]" />
-        {sidebarContent}
-      </aside>
-    </>
   );
 }

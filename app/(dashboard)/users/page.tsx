@@ -127,7 +127,7 @@ const generateMockUsers = (count: number): User[] => {
       status: statuses[Math.floor(Math.random() * statuses.length)],
       location: locations[Math.floor(Math.random() * locations.length)],
       joinDate: joinDate.toISOString(),
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`,
+      avatar: `https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRDk_071dbbz-bewOvpfYa3IlyImYtpvQmluw&s`,
     };
   });
 };

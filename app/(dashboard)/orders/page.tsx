@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -19,12 +19,14 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  Filter,
   Search,
+  Plus,
+  X,
 } from "lucide-react";
 import OrderDetailsModal from "@/components/orders/OrderDetailsModal";
 import Image from "next/image";
 import { Skeleton } from "@/components/ui/skeleton";
+import AddOrderModal from "@/components/orders/AddOrderModal";
 
 interface OrderItem {
   id: string;
@@ -248,13 +250,76 @@ function ActionsCell({
   );
 }
 
+// Fuzzy search function
+function fuzzySearch(searchTerm: string, text: string): boolean {
+  const search = searchTerm.toLowerCase();
+  const tokens = text.toLowerCase().split("");
+  let searchPosition = 0;
+
+  for (const char of tokens) {
+    if (char === search[searchPosition]) {
+      searchPosition += 1;
+      if (searchPosition === search.length) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+// Advanced search function that checks multiple fields
+function advancedSearch(order: Order, searchTerm: string): boolean {
+  if (!searchTerm) return true;
+
+  const searchableFields = [
+    order.id,
+    order.title,
+    order.customerName,
+    order.country,
+    order.status,
+    order.size,
+    order.color,
+  ];
+
+  // Split search term by spaces to allow searching for multiple terms
+  const searchTerms = searchTerm.toLowerCase().split(" ").filter(Boolean);
+
+  // Check if all search terms match at least one field
+  return searchTerms.every((term) =>
+    searchableFields.some((field) => {
+      if (!field) return false;
+      return (
+        field.toLowerCase().includes(term) || // Exact match
+        fuzzySearch(term, field) // Fuzzy match
+      );
+    })
+  );
+}
+
 export default function OrdersPage() {
   const [sorting, setSorting] = useState([]);
-  const [globalFilter, setGlobalFilter] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [pageSize, setPageSize] = useState(25);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Filter orders based on search term
+  const filteredOrders = useMemo(() => {
+    return orders.filter((order) => advancedSearch(order, debouncedSearchTerm));
+  }, [orders, debouncedSearchTerm]);
 
   const columns = [
     columnHelper.accessor("id", {
@@ -417,18 +482,16 @@ export default function OrdersPage() {
   }, []);
 
   const table = useReactTable({
-    data: orders,
+    data: filteredOrders,
     columns,
     state: {
       sorting,
-      globalFilter,
       pagination: {
         pageSize,
         pageIndex: 0,
       },
     },
     onSortingChange: setSorting as OnChangeFn<SortingState>,
-    onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -473,23 +536,53 @@ export default function OrdersPage() {
         <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
           Orders
         </h1>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <div className="relative flex-1 sm:min-w-[300px]">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
             <input
+              ref={searchInputRef}
               type="text"
-              placeholder="Search orders..."
-              value={globalFilter}
-              onChange={(e) => setGlobalFilter(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 bg-white px-10 py-2 text-sm text-gray-900 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:focus:border-orange-500"
+              placeholder="Search by ID, title, customer, status..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary dark:focus:ring-primary/30 transition-all"
             />
+            <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+            {searchTerm && (
+              <button
+                onClick={() => {
+                  setSearchTerm("");
+                  searchInputRef.current?.focus();
+                }}
+                className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            )}
           </div>
-          <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">
-            <Filter className="h-4 w-4" />
-            Filter
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-primary hover:bg-orange-600/90 rounded-xl active:bg-primary/95 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 dark:focus:ring-primary/30"
+          >
+            <Plus className="w-5 h-5" />
+            Add Order
           </button>
         </div>
       </div>
+
+      {/* Show "No results found" message when search yields no results */}
+      {filteredOrders.length === 0 && !loading && (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="rounded-full bg-gray-100 p-3 dark:bg-gray-800">
+            <Search className="h-6 w-6 text-gray-400" />
+          </div>
+          <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-white">
+            No results found
+          </h3>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Try adjusting your search term or filters
+          </p>
+        </div>
+      )}
 
       <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
         <div className="overflow-x-auto">
@@ -640,6 +733,13 @@ export default function OrdersPage() {
           order={selectedOrder}
         />
       )}
+
+      {/* Add Order Modal */}
+      <AddOrderModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        userRole="customer"
+      />
     </div>
   );
 }
