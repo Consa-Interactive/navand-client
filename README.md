@@ -1,36 +1,112 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Navand Express
+
+A modern e-commerce platform built with Next.js 14, Tailwind CSS, and Prisma.
+
+## Features
+
+- 🔐 Phone number-based authentication
+- 📱 Responsive dashboard for order management
+- 🎨 Modern UI with dark mode support
+- 🔄 Real-time order tracking
+- 👤 User profiles and settings
+- 🌙 Dark mode support
+- 📊 Order statistics and analytics
+
+## Tech Stack
+
+- **Frontend:** Next.js 14, React, Tailwind CSS
+- **Backend:** Node.js, Prisma
+- **Database:** PostgreSQL
+- **Authentication:** JWT, Cookies
+- **State Management:** React Context
+- **UI Components:** Lucide Icons, Headless UI
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+
+- PostgreSQL
+- pnpm (recommended) or npm
+
+### Installation
+
+1. Clone the repository:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/yourusername/navand-express.git
+cd navand-express
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+pnpm install
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+3. Set up environment variables:
 
-## Learn More
+```bash
+cp .env.example .env
+```
 
-To learn more about Next.js, take a look at the following resources:
+4. Update the `.env` file with your configuration:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```env
+DATABASE_URL="postgresql://user:password@localhost:5432/navand"
+JWT_SECRET="your-secret-key"
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+5. Run database migrations:
 
-## Deploy on Vercel
+```bash
+pnpm prisma migrate dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+6. Start the development server:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+pnpm dev
+```
+
+The application will be available at `http://localhost:3000`
+
+## Project Structure
+
+```
+navand-express/
+├── client/                # Frontend application
+│   ├── app/              # Next.js 14 app directory
+│   ├── components/       # Reusable components
+│   ├── providers/        # Context providers
+│   └── public/           # Static assets
+├── server/               # Backend application
+│   ├── prisma/          # Database schema and migrations
+│   └── src/             # Server source code
+└── shared/              # Shared types and utilities
+```
+
+## Available Scripts
+
+- `pnpm dev` - Start development server
+- `pnpm build` - Build for production
+- `pnpm start` - Start production server
+- `pnpm lint` - Run ESLint
+- `pnpm test` - Run tests
+- `pnpm prisma:studio` - Open Prisma Studio
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is proprietary software. All rights reserved.
+
+## Support
+
+For support, email support@consainteractive.com or join our Slack channel.
