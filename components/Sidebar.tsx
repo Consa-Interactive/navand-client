@@ -17,6 +17,15 @@ interface SidebarProps {
   onMobileClose?: () => void;
 }
 
+type MenuSubItem = {
+  icon: React.ComponentType<Record<string, unknown>>;
+  label: string;
+  href: string;
+};
+type MenuItem = {
+  name: string;
+  items: MenuSubItem[];
+};
 export default function Sidebar({ onMobileClose }: SidebarProps) {
   const pathname = usePathname();
 
@@ -36,7 +45,7 @@ export default function Sidebar({ onMobileClose }: SidebarProps) {
     }
   }, [pathname, onMobileClose]);
 
-  const menuCategories = [
+  const menuCategories: MenuItem[] = [
     {
       name: "Main",
       items: [
