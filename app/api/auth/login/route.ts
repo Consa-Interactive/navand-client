@@ -21,6 +21,13 @@ export async function POST(request: Request) {
     // Find user
     const user = await prisma.user.findUnique({
       where: { phoneNumber },
+      select: {
+        id: true,
+        phoneNumber: true,
+        password: true,
+        role: true,
+        name: true,
+      },
     });
 
     if (!user) {
@@ -39,20 +46,41 @@ export async function POST(request: Request) {
       );
     }
 
-    // Generate JWT
+    if (!process.env.JWT_SECRET) {
+      return NextResponse.json(
+        { error: "Server configuration error" },
+        { status: 500 }
+      );
+    }
+
+    // Generate JWT with all necessary user information
     const token = jwt.sign(
       {
         sub: user.id,
         phoneNumber: user.phoneNumber,
         role: user.role,
+        name: user.name,
       },
-      process.env.JWT_SECRET || "super-secret",
+      process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
 
-    return NextResponse.json({ access_token: token });
-  } catch (error) {
-    console.error("Login error:", error);
+    // Update last login
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLogin: new Date() },
+    });
+
+    return NextResponse.json({
+      access_token: token,
+      user: {
+        id: user.id,
+        phoneNumber: user.phoneNumber,
+        role: user.role,
+        name: user.name,
+      },
+    });
+  } catch {
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -27,7 +27,7 @@ export async function middleware(request: NextRequest) {
       try {
         // Verify token
         const secret = new TextEncoder().encode(
-          process.env.JWT_SECRET || "super-secret" // TODO: remove this in production
+          process.env.JWT_SECRET || "super-secret"
         );
         const { payload } = await jose.jwtVerify(token, secret);
 
@@ -40,6 +40,7 @@ export async function middleware(request: NextRequest) {
         const requestHeaders = new Headers(request.headers);
         requestHeaders.set("x-user-id", payload.sub as string);
         requestHeaders.set("x-user-role", payload.role as string);
+        requestHeaders.set("x-user-phone", payload.phoneNumber as string);
 
         return NextResponse.next({
           request: {
@@ -55,8 +56,7 @@ export async function middleware(request: NextRequest) {
     }
 
     return NextResponse.next();
-  } catch (error) {
-    console.error("Middleware error:", error);
+  } catch {
     return NextResponse.next();
   }
 }

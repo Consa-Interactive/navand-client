@@ -1,16 +1,18 @@
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import jwt from "jsonwebtoken";
 
 const prisma = new PrismaClient();
 
-export async function PUT(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+interface RouteSegmentProps {
+  params: { id: string };
+}
+
+export async function PUT(request: NextRequest, props: RouteSegmentProps) {
   try {
     // Get token from Authorization header
-    const authHeader = req.headers.get("Authorization");
+    const authHeader = request.headers.get("Authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return NextResponse.json({ error: "No token provided" }, { status: 401 });
     }
@@ -40,8 +42,8 @@ export async function PUT(
       );
     }
 
-    const orderId = parseInt(params.id);
-    const body = await req.json();
+    const orderId = parseInt(props.params.id);
+    const body = await request.json();
     const {
       title,
       size,
@@ -83,8 +85,7 @@ export async function PUT(
     });
 
     return NextResponse.json(updatedOrder);
-  } catch (error) {
-    console.error("Error updating order:", error);
+  } catch {
     return NextResponse.json(
       { error: "Failed to update order" },
       { status: 500 }
