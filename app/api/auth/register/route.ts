@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, phoneNumber, password } = body;
+    const { name, phoneNumber, password, address, city, country } = body;
 
     // Validate required fields
     if (!name || !phoneNumber || !password) {
@@ -53,8 +53,10 @@ export async function POST(request: Request) {
         phoneNumber,
         password: hashedPassword,
         role: "CUSTOMER",
-        email: null,
-        isActive: true,
+        isActive: true, // TODO: change to false with verification
+        address: address || "",
+        city: city || "",
+        country: country || "",
       },
     });
     // Remove password from response

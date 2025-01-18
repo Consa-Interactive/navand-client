@@ -23,9 +23,10 @@ import {
   Plus,
   X,
   Package,
-  MoreVertical,
   Eye,
   Edit,
+  DollarSign,
+  CheckCircle,
 } from "lucide-react";
 import OrderDetailsModal from "@/components/orders/OrderDetailsModal";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -34,6 +35,9 @@ import Cookies from "js-cookie";
 import Image from "next/image";
 import EditOrderModal from "@/components/orders/EditOrderModal";
 import { useApp } from "@/providers/AppProvider";
+import SetPriceModal from "@/components/orders/SetPriceModal";
+import OrderActionModal from "@/components/orders/OrderActionModal";
+import { Role } from "@prisma/client";
 
 type OrderStatus =
   | "PENDING"
@@ -41,6 +45,7 @@ type OrderStatus =
   | "PURCHASED"
   | "SHIPPED"
   | "DELIVERED"
+  | "CONFIRMED"
   | "CANCELLED";
 
 interface OrderItem {
@@ -98,6 +103,11 @@ const statusColors = {
     text: "text-red-700 dark:text-red-500",
     dot: "bg-red-500",
   },
+  CONFIRMED: {
+    bg: "bg-emerald-50 dark:bg-emerald-900/20",
+    text: "text-emerald-700 dark:text-emerald-500",
+    dot: "bg-emerald-500",
+  },
 };
 
 // Function to fetch orders
@@ -140,75 +150,67 @@ const advancedSearch = (order: Order, term: string) => {
 
 const columnHelper = createColumnHelper<Order>();
 
-function ActionsCell({
+const ActionsCell = ({
   row,
   setSelectedOrder,
   onEditOrder,
   isAdmin,
+  setSelectedOrderForPrice,
+  setSelectedOrderForAction,
 }: {
   row: Row<Order>;
-  setSelectedOrder: (order: Order | null) => void;
+  setSelectedOrder: (order: Order) => void;
   onEditOrder: (order: Order) => void;
   isAdmin: boolean;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  setSelectedOrderForPrice: (order: Order) => void;
+  setSelectedOrderForAction: (order: Order) => void;
+}) => {
+  const order = row.original;
+  const canSetPrice = isAdmin && order.status === "PENDING";
+  const canConfirmOrder = order.status === "PROCESSING";
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="flex items-center justify-end gap-2">
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="rounded-xl p-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+        onClick={() => setSelectedOrder(order)}
+        className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500 dark:hover:bg-gray-700"
+        title="View Details"
       >
-        <MoreVertical className="h-4 w-4 text-gray-500" />
+        <Eye className="h-4 w-4" />
       </button>
 
-      {isOpen && (
-        <div className="absolute right-0 top-full z-[100] mt-1 w-48 overflow-hidden rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 dark:bg-gray-800 dark:ring-gray-700">
-          <div className="py-1">
-            <button
-              onClick={() => {
-                setSelectedOrder(row.original);
-                setIsOpen(false);
-              }}
-              className="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
-            >
-              <Eye className="h-4 w-4" />
-              View Details
-            </button>
+      {isAdmin && (
+        <button
+          onClick={() => onEditOrder(order)}
+          className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500 dark:hover:bg-gray-700"
+          title="Edit Order"
+        >
+          <Edit className="h-4 w-4" />
+        </button>
+      )}
 
-            {isAdmin && (
-              <button
-                onClick={() => {
-                  onEditOrder(row.original);
-                  setIsOpen(false);
-                }}
-                className="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
-              >
-                <Edit className="h-4 w-4" />
-                Edit Order
-              </button>
-            )}
-          </div>
-        </div>
+      {canSetPrice && (
+        <button
+          onClick={() => setSelectedOrderForPrice(order)}
+          className="rounded-lg p-2 text-blue-400 hover:bg-blue-100 hover:text-blue-500 dark:hover:bg-blue-900/20"
+          title="Set Prices"
+        >
+          <DollarSign className="h-4 w-4" />
+        </button>
+      )}
+
+      {canConfirmOrder && (
+        <button
+          onClick={() => setSelectedOrderForAction(order)}
+          className="rounded-lg p-2 text-green-400 hover:bg-green-100 hover:text-green-500 dark:hover:bg-green-900/20"
+          title="Confirm/Reject Order"
+        >
+          <CheckCircle className="h-4 w-4" />
+        </button>
       )}
     </div>
   );
-}
+};
 
 export default function OrdersPage() {
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -223,34 +225,41 @@ export default function OrdersPage() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [selectedOrderForEdit, setSelectedOrderForEdit] =
     useState<Order | null>(null);
-  const { user } = useApp();
+  const [selectedOrderForPrice, setSelectedOrderForPrice] =
+    useState<Order | null>(null);
+  const [selectedOrderForAction, setSelectedOrderForAction] =
+    useState<Order | null>(null);
+  const { user, orderUpdates } = useApp();
   const isAdmin = user?.role === "ADMIN" || user?.role === "WORKER";
 
   // Function to refresh orders
   const refreshOrders = async () => {
     try {
-      const data = await fetchOrders();
+      setLoading(true);
+      const token = Cookies.get("token");
+      if (!token) return;
+
+      const response = await fetch("/api/orders", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) throw new Error("Failed to fetch orders");
+
+      const data = await response.json();
       setOrders(data);
     } catch (error) {
       console.error("Error refreshing orders:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Initial fetch
+  // Initial fetch and refresh on orderUpdates change
   useEffect(() => {
-    const loadOrders = async () => {
-      try {
-        setLoading(true);
-        await refreshOrders();
-      } catch (error) {
-        console.error("Error loading orders:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadOrders();
-  }, []);
+    refreshOrders();
+  }, [orderUpdates]);
 
   // Debounce search term
   useEffect(() => {
@@ -420,6 +429,8 @@ export default function OrdersPage() {
           setSelectedOrder={setSelectedOrder}
           onEditOrder={setSelectedOrderForEdit}
           isAdmin={isAdmin}
+          setSelectedOrderForPrice={setSelectedOrderForPrice}
+          setSelectedOrderForAction={setSelectedOrderForAction}
         />
       ),
     }),
@@ -760,7 +771,7 @@ export default function OrdersPage() {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onOrderAdded={refreshOrders}
-        userRole={user?.role}
+        userRole={user?.role as Role}
       />
 
       {/* Order Details Modal */}
@@ -779,6 +790,24 @@ export default function OrdersPage() {
           onClose={() => setSelectedOrderForEdit(null)}
           order={selectedOrderForEdit as Order}
           onOrderUpdated={refreshOrders}
+        />
+      )}
+
+      {selectedOrderForPrice && (
+        <SetPriceModal
+          isOpen={!!selectedOrderForPrice}
+          onClose={() => setSelectedOrderForPrice(null)}
+          order={selectedOrderForPrice}
+          onOrderUpdated={fetchOrders}
+        />
+      )}
+
+      {selectedOrderForAction && (
+        <OrderActionModal
+          isOpen={!!selectedOrderForAction}
+          onClose={() => setSelectedOrderForAction(null)}
+          order={selectedOrderForAction}
+          onOrderUpdated={fetchOrders}
         />
       )}
     </div>

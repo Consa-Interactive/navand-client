@@ -22,6 +22,28 @@ export async function GET(req: Request) {
     }
 
     const userId = parseInt(decoded.sub);
+
+    // Get all orders for the user
+    const allOrders = await prisma.order.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        price: true,
+        quantity: true,
+        createdAt: true,
+      },
+    });
+
+    // Get recent orders (last 3) for display
+    const recentOrders = allOrders
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )
+      .slice(0, 3);
+
     // Get user statistics
     const [totalOrders, deliveredOrders, savedAddresses] = await Promise.all([
       prisma.order.count({
@@ -39,7 +61,6 @@ export async function GET(req: Request) {
           address: true,
           city: true,
           country: true,
-          email: true,
           phoneNumber: true,
           createdAt: true,
           role: true,
@@ -47,21 +68,6 @@ export async function GET(req: Request) {
         },
       }),
     ]);
-
-    // Get recent orders (last 3)
-    const recentOrders = await prisma.order.findMany({
-      where: { userId },
-      orderBy: { createdAt: "desc" },
-      take: 3,
-      select: {
-        id: true,
-        title: true,
-        status: true,
-        price: true,
-        quantity: true,
-        createdAt: true,
-      },
-    });
 
     return NextResponse.json({
       stats: {
@@ -72,6 +78,11 @@ export async function GET(req: Request) {
       },
       userInfo: savedAddresses,
       recentOrders: recentOrders.map((order) => ({
+        ...order,
+        total: order.price * order.quantity,
+        items: order.quantity,
+      })),
+      allOrders: allOrders.map((order) => ({
         ...order,
         total: order.price * order.quantity,
         items: order.quantity,

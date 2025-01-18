@@ -12,6 +12,7 @@ import {
   BellRing,
   BellOff,
   Eye,
+  MapPin,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -25,8 +26,8 @@ export default function SettingsPage() {
 
   const [privacy, setPrivacy] = useState({
     profileVisibility: "public",
-    showEmail: false,
-    showPhone: true,
+    showPhone: false,
+    showAddress: false,
   });
 
   return (
@@ -267,41 +268,6 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <Mail className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        Show Email Address
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        Display your email to other users
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() =>
-                      setPrivacy((prev) => ({
-                        ...prev,
-                        showEmail: !prev.showEmail,
-                      }))
-                    }
-                    className={`w-11 h-6 rounded-full transition-colors duration-200 ${
-                      privacy.showEmail
-                        ? "bg-primary"
-                        : "bg-gray-200 dark:bg-gray-700"
-                    } relative`}
-                  >
-                    <div
-                      className={`w-5 h-5 rounded-full bg-white shadow-sm absolute top-0.5 left-0.5 transition-transform duration-200 ${
-                        privacy.showEmail ? "translate-x-5" : ""
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                       <Phone className="w-5 h-5 text-primary" />
                     </div>
                     <div>
@@ -329,6 +295,41 @@ export default function SettingsPage() {
                     <div
                       className={`w-5 h-5 rounded-full bg-white shadow-sm absolute top-0.5 left-0.5 transition-transform duration-200 ${
                         privacy.showPhone ? "translate-x-5" : ""
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <MapPin className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        Show Address
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Display your address to other users
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() =>
+                      setPrivacy((prev) => ({
+                        ...prev,
+                        showAddress: !prev.showAddress,
+                      }))
+                    }
+                    className={`w-11 h-6 rounded-full transition-colors duration-200 ${
+                      privacy.showAddress
+                        ? "bg-primary"
+                        : "bg-gray-200 dark:bg-gray-700"
+                    } relative`}
+                  >
+                    <div
+                      className={`w-5 h-5 rounded-full bg-white shadow-sm absolute top-0.5 left-0.5 transition-transform duration-200 ${
+                        privacy.showAddress ? "translate-x-5" : ""
                       }`}
                     />
                   </button>

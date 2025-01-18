@@ -40,7 +40,6 @@ enum OrderStatus {
 model User {
   id          Int       @id @default(autoincrement())
   phoneNumber String    @unique
-  email       String?   @unique
   name        String
   password    String
   address     String?

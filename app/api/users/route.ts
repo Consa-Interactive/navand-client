@@ -73,7 +73,6 @@ export async function GET(req: Request) {
             name: true,
             phoneNumber: true,
             role: true,
-            email: true,
             address: true,
             city: true,
             country: true,
@@ -156,16 +155,8 @@ export async function POST(req: Request) {
       }
 
       const body = await req.json();
-      const {
-        name,
-        email,
-        phoneNumber,
-        role,
-        password,
-        address,
-        country,
-        city,
-      } = body;
+      const { name, phoneNumber, role, password, address, country, city } =
+        body;
 
       // Validate required fields
       if (!name || !phoneNumber || !role || !password) {
@@ -196,7 +187,6 @@ export async function POST(req: Request) {
       const user = await prisma.user.create({
         data: {
           name,
-          email,
           phoneNumber,
           role: role as Role,
           password: hashedPassword,
@@ -207,7 +197,6 @@ export async function POST(req: Request) {
         select: {
           id: true,
           name: true,
-          email: true,
           phoneNumber: true,
           role: true,
           address: true,

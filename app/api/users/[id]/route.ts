@@ -1,96 +1,113 @@
-import { NextResponse } from "next/server";
-import { PrismaClient, Role } from "@prisma/client";
+import { NextRequest, NextResponse } from "next/server";
+import { PrismaClient, User } from "@prisma/client";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
-export async function PUT(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest) {
   try {
-    const authHeader = req.headers.get("Authorization");
+    // Get user ID from URL
+    const id = request.nextUrl.pathname.split("/").pop();
+    const userId = parseInt(id || "");
+    if (isNaN(userId)) {
+      return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
+    }
+
+    const authHeader = request.headers.get("Authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return NextResponse.json({ error: "No token provided" }, { status: 401 });
     }
 
     const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
-      sub: string;
-      role: string;
-    };
+    if (!process.env.JWT_SECRET) {
+      return NextResponse.json(
+        { error: "JWT secret not configured" },
+        { status: 500 }
+      );
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET) as {
+        sub: string;
+        role: string;
+      };
+    } catch {
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    }
 
     if (
       !decoded ||
       !decoded.sub ||
-      (decoded.role !== "ADMIN" && decoded.role !== "WORKER")
+      (decoded.role !== "ADMIN" &&
+        decoded.role !== "WORKER" &&
+        parseInt(decoded.sub) !== userId)
     ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    const body = await req.json();
-    const { name, email, phoneNumber, role, password, address, country, city } =
-      body;
+    const body = await request.json();
+    const { name, phoneNumber, role, password, address, country, city } = body;
 
-    // Validate required fields
-    if (!name || !phoneNumber || !role) {
+    // Prepare update data
+    const updateData: Partial<User> = {};
+
+    // Only add fields that are provided
+    if (name !== undefined) updateData.name = name;
+    // Prevent phone number updates
+    if (decoded.role !== "ADMIN" && phoneNumber !== undefined) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Phone number cannot be changed" },
         { status: 400 }
       );
     }
-
-    // Check if email is already in use by another user
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        phoneNumber: phoneNumber,
-        id: {
-          not: parseInt(params.id),
-        },
-      },
-    });
-
-    if (existingUser) {
-      return NextResponse.json(
-        { error: "Phone number or email already in use" },
-        { status: 400 }
-      );
+    // Only admin can update phone numbers
+    if (decoded.role === "ADMIN" && phoneNumber !== undefined) {
+      updateData.phoneNumber = phoneNumber;
     }
-    // Update user
-    const updateData: {
-      name: string;
-      email: string;
-      phoneNumber: string;
-      role: Role;
-      address?: string;
-      country?: string;
-      city?: string;
-      password?: string;
-    } = {
-      name,
-      email,
-      phoneNumber,
-      role: role as Role,
-      address,
-      country,
-      city,
-    };
-
-    // Only update password if provided
+    if (role !== undefined) {
+      // Validate role if provided
+      const validRoles = ["ADMIN", "WORKER", "CUSTOMER"];
+      if (!validRoles.includes(role)) {
+        return NextResponse.json(
+          { error: "Invalid role specified" },
+          { status: 400 }
+        );
+      }
+      updateData.role = role;
+    }
+    if (address !== undefined) updateData.address = address;
+    if (country !== undefined) updateData.country = country;
+    if (city !== undefined) updateData.city = city;
     if (password) {
       updateData.password = await bcrypt.hash(password, 10);
     }
 
-    const user = await prisma.user.update({
-      where: {
-        id: parseInt(params.id),
-      },
+    // Check if phone number is already in use by another user if admin is updating it
+    if (decoded.role === "ADMIN" && phoneNumber !== undefined) {
+      const existingUser = await prisma.user.findFirst({
+        where: {
+          phoneNumber,
+          id: { not: userId },
+        },
+      });
+
+      if (existingUser) {
+        return NextResponse.json(
+          { error: "Phone number already in use" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Update user
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
       data: updateData,
       select: {
         id: true,
         name: true,
-        email: true,
         phoneNumber: true,
         role: true,
         address: true,
@@ -101,7 +118,7 @@ export async function PUT(
       },
     });
 
-    return NextResponse.json(user);
+    return NextResponse.json({ user: updatedUser });
   } catch (error) {
     console.error("Error in PUT /api/users/[id]:", error);
     return NextResponse.json(
@@ -111,54 +128,57 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json({ error: "No token provided" }, { status: 401 });
-    }
+// export async function DELETE(
+//   request: NextRequest,
+//   { params }: { params: { id: string } }
+// ) {
+//   try {
+//     // Get user ID from URL
+//     const id = request.nextUrl.pathname.split("/").pop();
+//     const userId = parseInt(id || "");
+//     if (isNaN(userId)) {
+//       return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
+//     }
 
-    const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
-      sub: string;
-      role: string;
-    };
+//     const authHeader = request.headers.get("Authorization");
+//     if (!authHeader || !authHeader.startsWith("Bearer ")) {
+//       return NextResponse.json({ error: "No token provided" }, { status: 401 });
+//     }
 
-    if (
-      !decoded ||
-      !decoded.sub ||
-      (decoded.role !== "ADMIN" && decoded.role !== "WORKER")
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
+//     const token = authHeader.split(" ")[1];
+//     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+//       sub: string;
+//       role: string;
+//     };
 
-    // Check if user exists
-    const user = await prisma.user.findUnique({
-      where: {
-        id: parseInt(params.id),
-      },
-    });
+//     if (
+//       !decoded ||
+//       !decoded.sub ||
+//       (decoded.role !== "ADMIN" && decoded.role !== "WORKER")
+//     ) {
+//       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+//     }
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
+//     // Check if user exists
+//     const user = await prisma.user.findUnique({
+//       where: { id: userId },
+//     });
 
-    // Delete user
-    await prisma.user.delete({
-      where: {
-        id: parseInt(params.id),
-      },
-    });
+//     if (!user) {
+//       return NextResponse.json({ error: "User not found" }, { status: 404 });
+//     }
 
-    return NextResponse.json({ message: "User deleted successfully" });
-  } catch (error) {
-    console.error("Error in DELETE /api/users/[id]:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
-}
+//     // Delete user
+//     await prisma.user.delete({
+//       where: { id: userId },
+//     });
+
+//     return NextResponse.json({ message: "User deleted successfully" });
+//   } catch (error) {
+//     console.error("Error in DELETE /api/users/[id]:", error);
+//     return NextResponse.json(
+//       { error: "Internal server error" },
+//       { status: 500 }
+//     );
+//   }
+// }

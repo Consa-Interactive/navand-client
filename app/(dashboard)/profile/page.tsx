@@ -30,7 +30,6 @@ interface UserStats {
 
 interface UserInfo {
   email: string | null;
-  phoneNumber: string;
   address: string | null;
   city: string | null;
   country: string | null;
@@ -59,6 +58,66 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [data, setData] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [formData, setFormData] = useState({
+    address: "",
+    city: "",
+    country: "",
+  });
+
+  useEffect(() => {
+    if (data?.userInfo) {
+      setFormData({
+        address: data.userInfo.address || "",
+        city: data.userInfo.city || "",
+        country: data.userInfo.country || "",
+      });
+    }
+  }, [data?.userInfo]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleUpdateProfile = async () => {
+    try {
+      const token = Cookies.get("token");
+      if (!token || !user?.id) return;
+
+      const response = await fetch(`/api/users/${user.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update profile");
+      }
+
+      // Refresh the profile data
+      const statsResponse = await fetch("/api/user/stats", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!statsResponse.ok) {
+        throw new Error("Failed to refresh profile data");
+      }
+
+      const newData = await statsResponse.json();
+      setData(newData);
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+    }
+  };
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -255,7 +314,13 @@ export default function ProfilePage() {
                 {/* Actions */}
                 <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                   <button
-                    onClick={() => setIsEditing(!isEditing)}
+                    onClick={() => {
+                      if (isEditing) {
+                        handleUpdateProfile();
+                      } else {
+                        setIsEditing(true);
+                      }
+                    }}
                     className="inline-flex items-center justify-center px-6 py-2.5 text-sm font-medium rounded-xl border-2 border-primary text-primary hover:bg-primary hover:text-white dark:text-primary dark:hover:text-white transition-all duration-200 gap-2 group"
                   >
                     <Edit3 className="w-4 h-4 transition-transform group-hover:scale-110" />
@@ -404,36 +469,14 @@ export default function ProfilePage() {
               <div className="mt-6 grid gap-6 sm:grid-cols-2">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                    Phone Number
-                  </label>
-                  <input
-                    type="tel"
-                    disabled={!isEditing}
-                    value={data.userInfo.phoneNumber}
-                    className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    disabled={!isEditing}
-                    value={data.userInfo.email || ""}
-                    className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
                     City
                   </label>
                   <input
                     type="text"
+                    name="city"
                     disabled={!isEditing}
-                    value={data.userInfo.city || ""}
+                    value={formData.city}
+                    onChange={handleInputChange}
                     className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
@@ -444,8 +487,10 @@ export default function ProfilePage() {
                   </label>
                   <input
                     type="text"
+                    name="country"
                     disabled={!isEditing}
-                    value={data.userInfo.country || ""}
+                    value={formData.country}
+                    onChange={handleInputChange}
                     className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
@@ -456,8 +501,10 @@ export default function ProfilePage() {
                   </label>
                   <input
                     type="text"
+                    name="address"
                     disabled={!isEditing}
-                    value={data.userInfo.address || ""}
+                    value={formData.address}
+                    onChange={handleInputChange}
                     className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>

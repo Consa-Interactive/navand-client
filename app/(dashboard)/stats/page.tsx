@@ -70,48 +70,46 @@ export default function StatsPage() {
         const data = await response.json();
 
         // Calculate total spent from all orders
-        const totalSpent = data.recentOrders.reduce(
+        const totalSpent = data.allOrders.reduce(
           (sum: number, order: Order) => sum + (order.total || 0),
           0
         );
 
         // Calculate average order value
         const averageOrderValue =
-          data.recentOrders.length > 0
-            ? totalSpent / data.recentOrders.length
-            : 0;
+          data.allOrders.length > 0 ? totalSpent / data.allOrders.length : 0;
 
         // Process the data to match our stats interface
         const processedStats: OrderStats = {
-          totalOrders: data.recentOrders.length,
+          totalOrders: data.allOrders.length,
           totalSpent: totalSpent,
           averageOrderValue: averageOrderValue,
-          deliveredOrders: data.recentOrders.filter(
+          deliveredOrders: data.allOrders.filter(
             (order: Order) => order.status === "DELIVERED"
           ).length,
-          processingOrders: data.recentOrders.filter(
+          processingOrders: data.allOrders.filter(
             (order: Order) => order.status === "PROCESSING"
           ).length,
-          cancelledOrders: data.recentOrders.filter(
+          cancelledOrders: data.allOrders.filter(
             (order: Order) => order.status === "CANCELLED"
           ).length,
-          monthlySpending: processMonthlySpending(data.recentOrders),
+          monthlySpending: processMonthlySpending(data.allOrders),
           ordersByStatus: [
             {
               status: "DELIVERED",
-              count: data.recentOrders.filter(
+              count: data.allOrders.filter(
                 (order: Order) => order.status === "DELIVERED"
               ).length,
             },
             {
               status: "PROCESSING",
-              count: data.recentOrders.filter(
+              count: data.allOrders.filter(
                 (order: Order) => order.status === "PROCESSING"
               ).length,
             },
             {
               status: "CANCELLED",
-              count: data.recentOrders.filter(
+              count: data.allOrders.filter(
                 (order: Order) => order.status === "CANCELLED"
               ).length,
             },

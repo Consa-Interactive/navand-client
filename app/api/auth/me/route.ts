@@ -20,11 +20,15 @@ export async function GET(request: Request) {
       );
     }
 
+    if (!process.env.JWT_SECRET) {
+      return NextResponse.json(
+        { error: "JWT secret not configured" },
+        { status: 500 }
+      );
+    }
+
     // Verify token
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || "super-secret"
-    ) as jwt.JwtPayload;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET) as jwt.JwtPayload;
 
     if (!decoded?.sub) {
       return NextResponse.json(
@@ -42,7 +46,6 @@ export async function GET(request: Request) {
         id: true,
         name: true,
         phoneNumber: true,
-        email: true,
         role: true,
         address: true,
         city: true,

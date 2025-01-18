@@ -18,6 +18,8 @@ interface AppContextType {
   login: (token: string) => void;
   logout: () => void;
   refreshUser: () => Promise<void>;
+  setOrderUpdates: (value: boolean) => void;
+  orderUpdates: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -25,7 +27,15 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [orderUpdates, setOrderUpdates] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    if (orderUpdates) {
+      // Reset after triggering refresh
+      setTimeout(() => setOrderUpdates(false), 100);
+    }
+  }, [orderUpdates]);
 
   const fetchUser = async (token: string) => {
     try {
@@ -88,6 +98,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     login,
     logout,
     refreshUser,
+    setOrderUpdates,
+    orderUpdates,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

@@ -1,79 +1,124 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { Order, PrismaClient } from "@prisma/client";
 import jwt from "jsonwebtoken";
 
 const prisma = new PrismaClient();
 
-interface RouteSegmentProps {
-  params: { id: string };
-}
-
-export async function PUT(request: NextRequest, props: RouteSegmentProps) {
+export async function PUT(request: NextRequest) {
   try {
-    // Get token from Authorization header
+    // Get order ID from URL
+    const orderId = parseInt(request.url.split("/").pop() || "");
+    if (isNaN(orderId)) {
+      return NextResponse.json({ error: "Invalid order ID" }, { status: 400 });
+    }
+
+    // Verify authentication
     const authHeader = request.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (!authHeader?.startsWith("Bearer ")) {
       return NextResponse.json({ error: "No token provided" }, { status: 401 });
     }
 
     const token = authHeader.split(" ")[1];
-    if (!token) {
+    const jwtSecret = process.env.JWT_SECRET;
+
+    if (!jwtSecret) {
+      console.error("JWT_SECRET is not configured");
       return NextResponse.json(
-        { error: "Invalid token format" },
+        { error: "Server configuration error" },
+        { status: 500 }
+      );
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, jwtSecret) as { sub: string; role: string };
+    } catch (jwtError) {
+      console.error("JWT verification failed:", jwtError);
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    }
+
+    if (!decoded?.sub) {
+      return NextResponse.json(
+        { error: "Invalid token payload" },
         { status: 401 }
       );
     }
 
-    // Verify token and check if user is admin
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
-      sub: string;
-      role: string;
-    };
+    // Get request body
+    const body = await request.json();
+    console.log("Received update request:", { orderId, body });
 
-    if (
-      !decoded ||
-      !decoded.sub ||
-      (decoded.role !== "ADMIN" && decoded.role !== "WORKER")
-    ) {
+    // Find existing order
+    const existingOrder = await prisma.order.findUnique({
+      where: { id: orderId },
+    });
+
+    if (!existingOrder) {
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+
+    // Prepare update data
+    const updateData: Partial<Order> = {};
+
+    // Handle quantity update
+    if (body.quantity !== undefined) {
+      const quantity = Number(body.quantity);
+      if (!isNaN(quantity) && quantity > 0) {
+        updateData.quantity = quantity;
+      }
+    }
+
+    // Handle title, size, color, notes, and productLink updates
+    if (body.title !== undefined) updateData.title = body.title;
+    if (body.size !== undefined) updateData.size = body.size;
+    if (body.color !== undefined) updateData.color = body.color;
+    if (body.notes !== undefined) updateData.notes = body.notes;
+    if (body.productLink !== undefined)
+      updateData.productLink = body.productLink;
+    if (body.imageUrl !== undefined) updateData.imageUrl = body.imageUrl;
+
+    // Only update price fields if they are provided and valid numbers
+    if (body.price !== undefined) {
+      const price = Number(body.price);
+      if (!isNaN(price)) {
+        updateData.price = price;
+      }
+    }
+
+    if (body.shippingPrice !== undefined) {
+      const shippingPrice = Number(body.shippingPrice);
+      if (!isNaN(shippingPrice)) {
+        updateData.shippingPrice = shippingPrice;
+      }
+    }
+
+    if (body.localShippingPrice !== undefined) {
+      const localShippingPrice = Number(body.localShippingPrice);
+      if (!isNaN(localShippingPrice)) {
+        updateData.localShippingPrice = localShippingPrice;
+      }
+    }
+
+    // Always update status if provided
+    if (body.status) {
+      updateData.status = body.status;
+    }
+
+    // If no valid update data
+    if (Object.keys(updateData).length === 0) {
       return NextResponse.json(
-        { error: "Unauthorized - Admin access required" },
-        { status: 403 }
+        { error: "No valid fields to update" },
+        { status: 400 }
       );
     }
 
-    const orderId = parseInt(props.params.id);
-    const body = await request.json();
-    const {
-      title,
-      size,
-      color,
-      quantity,
-      price,
-      shippingPrice,
-      status,
-      productLink,
-      imageUrl,
-      notes,
-    } = body;
+    console.log("Updating order with data:", updateData);
 
     // Update order
     const updatedOrder = await prisma.order.update({
-      where: {
-        id: orderId,
-      },
-      data: {
-        title,
-        size: size || "N/A",
-        color: color || "N/A",
-        quantity,
-        price,
-        shippingPrice,
-        status,
-        productLink: productLink || "",
-        imageUrl: imageUrl || "",
-        notes: notes || "N/A",
-      },
+      where: { id: orderId },
+      data: updateData,
       include: {
         user: {
           select: {
@@ -84,8 +129,14 @@ export async function PUT(request: NextRequest, props: RouteSegmentProps) {
       },
     });
 
+    console.log("Order updated successfully:", updatedOrder);
     return NextResponse.json(updatedOrder);
-  } catch {
+  } catch (error) {
+    console.error("Error details:", {
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
     return NextResponse.json(
       { error: "Failed to update order" },
       { status: 500 }
