@@ -4,42 +4,25 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import Cookies from "js-cookie";
 
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  phoneNumber: string;
-  role: "ADMIN" | "WORKER" | "CUSTOMER";
-  address?: string;
-  city?: string;
-  country?: string;
-  createdAt: string;
-  updatedAt: string;
-  avatar?: string;
-}
-
-interface UserEditModalProps {
+interface CreateUserModalProps {
   isOpen: boolean;
   onClose: () => void;
-  user: User | null;
-  onUserUpdated: () => Promise<void>;
+  onUserCreated: () => Promise<void>;
 }
 
-export default function UserEditModal({
+export default function CreateUserModal({
   isOpen,
   onClose,
-  user,
-  onUserUpdated,
-}: UserEditModalProps) {
+  onUserCreated,
+}: CreateUserModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    firstName: user?.name?.split(" ")[0] || "",
-    lastName: user?.name?.split(" ")[1] || "",
-    email: user?.email || "",
-    phone: user?.phoneNumber || "",
-    role: user?.role || "",
-    isVerified: false,
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    role: "CUSTOMER",
     password: "",
     confirmPassword: "",
     address: "",
@@ -47,14 +30,14 @@ export default function UserEditModal({
     city: "",
   });
 
-  if (!isOpen || !user) return null;
+  if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    if (formData.password && formData.password !== formData.confirmPassword) {
+    if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
       setLoading(false);
       return;
@@ -66,33 +49,33 @@ export default function UserEditModal({
         throw new Error("No authentication token found");
       }
 
-      const response = await fetch(`/api/users/${user.id}`, {
-        method: "PUT",
+      const response = await fetch("/api/users", {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           name: `${formData.firstName} ${formData.lastName}`.trim(),
-          email: formData.email,
+          email: formData.email || undefined,
           phoneNumber: formData.phone,
-          role: formData.role,
-          ...(formData.password && { password: formData.password }),
-          address: formData.address,
-          country: formData.country,
-          city: formData.city,
+          role: formData.role as "ADMIN" | "WORKER" | "CUSTOMER",
+          password: formData.password,
+          address: formData.address || undefined,
+          country: formData.country || undefined,
+          city: formData.city || undefined,
         }),
       });
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Failed to update user");
+        throw new Error(data.error || "Failed to create user");
       }
 
-      await onUserUpdated();
+      await onUserCreated();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update user");
+      setError(err instanceof Error ? err.message : "Failed to create user");
     } finally {
       setLoading(false);
     }
@@ -115,7 +98,7 @@ export default function UserEditModal({
           {/* Header */}
           <div className="relative border-b border-gray-200 bg-gray-50/50 px-4 py-3 sm:px-6 sm:py-4 dark:border-gray-700 dark:bg-gray-800/50">
             <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white pr-8">
-              Edit User #{user.id}
+              Create New User
             </h3>
             <button
               onClick={onClose}
@@ -196,37 +179,19 @@ export default function UserEditModal({
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <label className={labelClassName}>Role</label>
+
                     <select
-                      defaultValue={"CUSTOMER"}
                       value={formData.role}
                       onChange={(e) =>
                         setFormData({ ...formData, role: e.target.value })
                       }
                       className={inputClassName}
+                      required
                     >
                       <option value="CUSTOMER">Customer</option>
                       <option value="ADMIN">Admin</option>
                       <option value="WORKER">Worker</option>
                     </select>
-                  </div>
-                  <div className="flex items-center">
-                    <label className="relative inline-flex cursor-pointer items-center">
-                      <input
-                        type="checkbox"
-                        checked={formData.isVerified}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            isVerified: e.target.checked,
-                          })
-                        }
-                        className="peer sr-only"
-                      />
-                      <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-orange-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:border-gray-600 dark:bg-gray-700 dark:peer-focus:ring-orange-800"></div>
-                      <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300">
-                        Is Verified
-                      </span>
-                    </label>
                   </div>
                 </div>
               </div>
@@ -238,7 +203,7 @@ export default function UserEditModal({
                 </h4>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label className={labelClassName}>New Password</label>
+                    <label className={labelClassName}>Password</label>
                     <input
                       type="password"
                       value={formData.password}
@@ -246,13 +211,12 @@ export default function UserEditModal({
                         setFormData({ ...formData, password: e.target.value })
                       }
                       className={inputClassName}
-                      placeholder="Enter new password"
+                      placeholder="Enter password"
+                      required
                     />
                   </div>
                   <div>
-                    <label className={labelClassName}>
-                      Confirm New Password
-                    </label>
+                    <label className={labelClassName}>Confirm Password</label>
                     <input
                       type="password"
                       value={formData.confirmPassword}
@@ -263,7 +227,8 @@ export default function UserEditModal({
                         })
                       }
                       className={inputClassName}
-                      placeholder="Confirm new password"
+                      placeholder="Confirm password"
+                      required
                     />
                   </div>
                 </div>
@@ -297,7 +262,7 @@ export default function UserEditModal({
                         }
                         className={inputClassName}
                       >
-                        <option value="">Select</option>
+                        <option value="">Select a city</option>
                         <option value="ER">Erbil</option>
                         <option value="SU">Sulaymaniyah</option>
                         <option value="DU">Duhok</option>
@@ -345,7 +310,7 @@ export default function UserEditModal({
                 disabled={loading}
                 className="rounded-xl bg-orange-500 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-white shadow-sm hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 dark:hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? "Saving..." : "Save Changes"}
+                {loading ? "Creating..." : "Create User"}
               </button>
             </div>
           </form>

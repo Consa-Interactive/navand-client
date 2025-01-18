@@ -1,97 +1,75 @@
-# Navand Express v1.1 Changelog
+# Değişiklik Günlüğü
 
-## Overview
+Bu projede yapılan tüm önemli değişiklikler bu dosyada belgelenecektir.
 
-This release focuses on implementing core authentication features, customer dashboard improvements, and enhanced user experience with modern UI components.
+## [1.2.0] - 2024-03-21
 
-## New Features
+### Eklenenler
 
-### Authentication System
+- Sistem tercihi algılama ve manuel geçiş ile karanlık mod desteği
+- Daha iyi kullanıcı deneyimi için iskelet yükleme animasyonları:
+  - Gösterge paneli yükleme durumları
+  - Sipariş tablosu yükleme animasyonu
+  - Kullanıcılar tablosu yükleme durumları
+  - Profil sayfası yükleme göstergeleri
+  - İstatistik sayfası yükleme görselleştirmesi
+- Sipariş oluşturmada sonsuz kaydırmalı müşteri arama işlevi
+- Rol tabanlı kullanıcı yönetim sistemi
+- Kapsamlı form alanları ile yeni kullanıcı oluşturma modalı
+- Geliştirilmiş hata yönetimi ve doğrulama
 
-- ✨ Implemented phone number-based authentication
-- 🔒 Added validation for Iraqi phone numbers (+964750xxxxxxx)
-- 📝 Simplified registration process with essential fields:
-  - Name
-  - Phone number
-  - Password
-- 🛡️ Enhanced error handling and user feedback
-- 🔑 JWT-based authentication with secure cookie storage
+### Değiştirildi
 
-### Customer Dashboard
+- Daha iyi token yönetimi ile geliştirilmiş kimlik doğrulama akışı
+- Tutarlılık için güncellenen kullanıcı arayüzü bileşenleri
+- Tüm sayfalarda geliştirilmiş mobil uyumluluk
+- Uygun yükleme durumları ile optimize edilmiş veri çekme
+- İyileştirilmiş form doğrulama mesajları
 
-- 📊 Added order statistics and metrics:
-  - Total orders count
-  - Total amount spent
-  - Active orders tracking
-  - Delivered orders count
-- 📦 Implemented recent orders section with:
-  - Order status indicators
-  - Visual status colors (Green/Yellow/Red)
-  - Order details preview
-  - Quick navigation to full order details
-- 🎨 Modern UI with responsive design
-- 🌙 Dark mode support
+### Düzeltildi
 
-### Profile & Settings
+- API uç noktalarında kullanıcı yetkilendirme sorunları
+- Token doğrulama ve hata yönetimi
+- Tablo başlığı düğme iç içe geçme sorunları
+- Resim bileşeni boş kaynak uyarıları
+- Hidrasyonla ilgili konsol hataları
+- Select elementi kontrol uyarıları
 
-- 👤 New user profile page with:
-  - Personal information display
-  - Account statistics
-  - Recent activity
-- ⚙️ Settings page featuring:
-  - Notification preferences
-  - Privacy controls
-  - Account management
-- 💳 Payment methods section
-- 🔔 Notification center
+### Güvenlik
 
-### Error Handling
+- Geliştirilmiş rol tabanlı erişim kontrolü
+- İyileştirilmiş API uç noktası güvenlik kontrolleri
+- Daha iyi token doğrulama ve hata yönetimi
+- Kullanıcı oluşturmada güvenli şifre işleme
 
-- 🎯 Custom 404 page with:
-  - Animated illustrations
-  - Smart navigation options
-  - Support contact information
-- 🎨 Consistent design language
-- 📱 Full responsive support
-- 🌓 Dark mode compatibility
+### Teknik
 
-### Global State Management
+- Uygun TypeScript arayüzleri uygulandı
+- Büyük veri setleri için sayfalama eklendi
+- API yanıt işleme optimize edildi
+- Geliştirilmiş bileşen tip güvenliği
 
-- 🔄 Implemented AppProvider for global state
-- 🔐 Authentication state management
-- 🍪 Cookie-based token storage
-- 💾 User data caching
-- 🔄 Auto-refresh mechanisms
+### Bağımlılıklar
 
-## Technical Improvements
+- Tüm paket sürümleri en son kararlı sürümlere güncellendi
+- Yeni UI bileşen kütüphaneleri eklendi
+- Derleme sistemi verimliliği artırıldı
 
-- 🎨 Implemented Tailwind CSS for styling
-- 🏗️ Next.js 14 App Router architecture
-- 🔒 Secure API routes with proper validation
-- 📱 Responsive design for all screen sizes
-- 🌓 System-wide dark mode support
-- 🔍 SEO optimizations
-- ⚡ Performance improvements
+## [1.1.0] - 2024-03-14
 
-## Bug Fixes
+[Önceki sürüm notları...]
 
-- 🐛 Fixed authentication token persistence
-- 🔧 Resolved phone number validation issues
-- 🎨 Fixed UI inconsistencies in dark mode
-- 🔄 Improved state management reliability
+---
 
-## Coming Soon
+## Değişiklik Türleri
 
-- 📱 Mobile app integration
-- 🌍 Multi-language support
-- 📊 Advanced analytics dashboard
-- 💬 Real-time chat support
-- 📨 Email notifications
+- `Eklendi` yeni özellikler için
+- `Değiştirildi` mevcut işlevsellikte yapılan değişiklikler için
+- `Kullanımdan Kaldırılacak` yakında kaldırılacak özellikler için
+- `Kaldırıldı` artık kaldırılan özellikler için
+- `Düzeltildi` hata düzeltmeleri için
+- `Güvenlik` güvenlik açığı düzeltmeleri için
 
-## Contributors
+## Nasıl Güncellenir
 
-- Birhat Karahan (@pappayoo)
-
-## License
-
-This project is proprietary software. All rights reserved.
+Detaylı güncelleme talimatları için lütfen dokümantasyona başvurun.

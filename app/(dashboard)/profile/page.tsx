@@ -1,6 +1,6 @@
 "use client";
 
-import { useApp } from "@/providers/AppProvider";
+import { useEffect, useState } from "react";
 import {
   User,
   Shield,
@@ -17,66 +17,204 @@ import {
   Star,
   Settings,
 } from "lucide-react";
-import { useState } from "react";
+import Cookies from "js-cookie";
+import { useApp } from "@/providers/AppProvider";
+import { Skeleton } from "@/components/ui/skeleton";
+
+interface UserStats {
+  totalOrders: number;
+  deliveredOrders: number;
+  savedAddresses: number;
+  wishlistItems: number;
+}
+
+interface UserInfo {
+  email: string | null;
+  phoneNumber: string;
+  address: string | null;
+  city: string | null;
+  country: string | null;
+  createdAt: string;
+  role: string;
+  isActive: boolean;
+}
+
+interface RecentOrder {
+  id: number;
+  title: string;
+  status: string;
+  total: number;
+  items: number;
+  createdAt: string;
+}
+
+interface ProfileData {
+  stats: UserStats;
+  userInfo: UserInfo;
+  recentOrders: RecentOrder[];
+}
 
 export default function ProfilePage() {
   const { user } = useApp();
   const [isEditing, setIsEditing] = useState(false);
+  const [data, setData] = useState<ProfileData | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data for last 5 orders - Replace this with actual API call
-  const lastOrders = [
-    {
-      id: "ORD001",
-      date: "2024-01-17",
-      status: "Delivered",
-      total: "$150.00",
-      items: 3,
-    },
-    {
-      id: "ORD002",
-      date: "2024-01-15",
-      status: "In Transit",
-      total: "$85.50",
-      items: 2,
-    },
-    {
-      id: "ORD003",
-      date: "2024-01-12",
-      status: "Processing",
-      total: "$220.00",
-      items: 4,
-    },
-    {
-      id: "ORD004",
-      date: "2024-01-10",
-      status: "Delivered",
-      total: "$65.00",
-      items: 1,
-    },
-    {
-      id: "ORD005",
-      date: "2024-01-08",
-      status: "Delivered",
-      total: "$175.25",
-      items: 3,
-    },
-  ];
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      try {
+        const token = Cookies.get("token");
+        if (!token) return;
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "delivered":
-        return "bg-green-500";
-      case "in transit":
-        return "bg-blue-500";
-      case "processing":
-        return "bg-yellow-500";
-      default:
-        return "bg-gray-500";
-    }
-  };
+        const response = await fetch("/api/user/stats", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) throw new Error("Failed to fetch profile data");
+
+        const profileData = await response.json();
+        setData(profileData);
+      } catch (error) {
+        console.error("Error fetching profile data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfileData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50/50 dark:bg-gray-900/50 py-6 px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Profile Header Skeleton */}
+          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <Skeleton className="h-20 w-20 rounded-2xl" />
+                <div className="space-y-2">
+                  <Skeleton className="h-6 w-48" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Skeleton className="h-10 w-32 rounded-xl" />
+                <Skeleton className="h-10 w-32 rounded-xl" />
+              </div>
+            </div>
+          </div>
+
+          {/* Profile Content */}
+          <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
+            {/* Left Column */}
+            <div className="space-y-6">
+              {/* Account Status */}
+              <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-6">
+                  <Skeleton className="w-5 h-5" />
+                  <Skeleton className="h-6 w-32" />
+                </div>
+                <div className="space-y-4">
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between"
+                    >
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-4 w-32" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-6">
+                  <Skeleton className="w-5 h-5" />
+                  <Skeleton className="h-6 w-32" />
+                </div>
+                <div className="space-y-3">
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <Skeleton key={index} className="h-11 w-full rounded-xl" />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Middle Column */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Stats Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="bg-gray-50 dark:bg-gray-700/50 rounded-2xl p-4"
+                  >
+                    <Skeleton className="w-8 h-8 rounded-xl mb-3" />
+                    <Skeleton className="h-6 w-16 mb-1" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                ))}
+              </div>
+
+              {/* Recent Orders */}
+              <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="w-5 h-5" />
+                    <Skeleton className="h-6 w-32" />
+                  </div>
+                  <Skeleton className="h-4 w-24" />
+                </div>
+                <div className="space-y-4">
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <div
+                      key={index}
+                      className="bg-gray-50 dark:bg-gray-700/50 rounded-2xl p-4"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <Skeleton className="w-10 h-10 rounded-xl" />
+                          <div className="space-y-1">
+                            <Skeleton className="h-4 w-24" />
+                            <div className="flex items-center gap-2">
+                              <Skeleton className="w-3.5 h-3.5" />
+                              <Skeleton className="h-3 w-20" />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-right">
+                            <Skeleton className="h-4 w-16 mb-1" />
+                            <Skeleton className="h-3 w-12" />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Skeleton className="w-2 h-2 rounded-full" />
+                            <Skeleton className="h-4 w-16" />
+                          </div>
+                          <Skeleton className="w-5 h-5" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading || !data) {
+    return <div>Loading...</div>;
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50/50 dark:bg-gray-900/50 py-6 px-4 sm:px-6">
+    <div className="min-h-screen bg-gray-50/50 dark:bg-gray-900/50 py-6 px-4 sm:px-6 lg:mt-0 mt-12">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Profile Header */}
         <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm overflow-hidden">
@@ -110,7 +248,7 @@ export default function ProfilePage() {
                     {user?.name}
                   </h1>
                   <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 mt-1">
-                    {user?.role}
+                    {data.userInfo.role}
                   </p>
                 </div>
 
@@ -145,7 +283,7 @@ export default function ProfilePage() {
                     Account Type
                   </p>
                   <p className="text-sm font-medium text-gray-900 dark:text-white capitalize">
-                    {user?.role?.toLowerCase()}
+                    {data.userInfo.role.toLowerCase()}
                   </p>
                 </div>
 
@@ -156,13 +294,13 @@ export default function ProfilePage() {
                   <div className="flex items-center gap-1.5">
                     <div
                       className={`w-2 h-2 rounded-full ${
-                        user?.isActive
+                        data.userInfo.isActive
                           ? "bg-green-500"
                           : "bg-gray-400 dark:bg-gray-600"
                       }`}
                     />
                     <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {user?.isActive ? "Active" : "Inactive"}
+                      {data.userInfo.isActive ? "Active" : "Inactive"}
                     </p>
                   </div>
                 </div>
@@ -172,9 +310,7 @@ export default function ProfilePage() {
                     Member Since
                   </p>
                   <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {user?.createdAt
-                      ? new Date(user.createdAt).toLocaleDateString()
-                      : "Not available"}
+                    {new Date(data.userInfo.createdAt).toLocaleDateString()}
                   </p>
                 </div>
               </div>
@@ -192,7 +328,7 @@ export default function ProfilePage() {
                     <Package className="w-4 h-4 text-primary" />
                   </div>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {lastOrders.length}
+                    {data.stats.totalOrders}
                   </p>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     Total Orders
@@ -203,7 +339,7 @@ export default function ProfilePage() {
                     <Truck className="w-4 h-4 text-primary" />
                   </div>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {lastOrders.filter((o) => o.status === "Delivered").length}
+                    {data.stats.deliveredOrders}
                   </p>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     Delivered
@@ -214,7 +350,7 @@ export default function ProfilePage() {
                     <MapPin className="w-4 h-4 text-primary" />
                   </div>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {user?.address ? "1" : "0"}
+                    {data.stats.savedAddresses}
                   </p>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     Saved Address
@@ -225,7 +361,7 @@ export default function ProfilePage() {
                     <Heart className="w-4 h-4 text-primary" />
                   </div>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    0
+                    {data.stats.wishlistItems}
                   </p>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     Wishlist
@@ -273,7 +409,7 @@ export default function ProfilePage() {
                   <input
                     type="tel"
                     disabled={!isEditing}
-                    value={user?.phoneNumber || ""}
+                    value={data.userInfo.phoneNumber}
                     className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
@@ -285,7 +421,7 @@ export default function ProfilePage() {
                   <input
                     type="email"
                     disabled={!isEditing}
-                    value={user?.email || ""}
+                    value={data.userInfo.email || ""}
                     className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
@@ -297,7 +433,7 @@ export default function ProfilePage() {
                   <input
                     type="text"
                     disabled={!isEditing}
-                    value={user?.city || ""}
+                    value={data.userInfo.city || ""}
                     className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
@@ -309,7 +445,7 @@ export default function ProfilePage() {
                   <input
                     type="text"
                     disabled={!isEditing}
-                    value={user?.country || ""}
+                    value={data.userInfo.country || ""}
                     className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
@@ -321,7 +457,7 @@ export default function ProfilePage() {
                   <input
                     type="text"
                     disabled={!isEditing}
-                    value={user?.address || ""}
+                    value={data.userInfo.address || ""}
                     className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
@@ -341,7 +477,7 @@ export default function ProfilePage() {
               </div>
 
               <div className="space-y-4">
-                {lastOrders.map((order) => (
+                {data.recentOrders.slice(0, 5).map((order) => (
                   <div
                     key={order.id}
                     className="group bg-gray-50 dark:bg-gray-700/50 rounded-2xl p-4 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200"
@@ -358,7 +494,7 @@ export default function ProfilePage() {
                           <div className="flex items-center gap-2 mt-1">
                             <Clock className="w-3.5 h-3.5 text-gray-400" />
                             <p className="text-xs text-gray-500 dark:text-gray-400">
-                              {new Date(order.date).toLocaleDateString()}
+                              {new Date(order.createdAt).toLocaleDateString()}
                             </p>
                           </div>
                         </div>
@@ -367,7 +503,7 @@ export default function ProfilePage() {
                       <div className="flex items-center gap-4">
                         <div className="text-right">
                           <p className="text-sm font-medium text-gray-900 dark:text-white">
-                            {order.total}
+                            ${order.total.toFixed(2)}
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400">
                             {order.items} items
@@ -375,11 +511,15 @@ export default function ProfilePage() {
                         </div>
                         <div className="flex items-center gap-2">
                           <div
-                            className={`w-2 h-2 rounded-full ${getStatusColor(
-                              order.status
-                            )}`}
+                            className={`w-2 h-2 rounded-full ${
+                              order.status === "DELIVERED"
+                                ? "bg-green-500"
+                                : order.status === "PROCESSING"
+                                ? "bg-yellow-500"
+                                : "bg-blue-500"
+                            }`}
                           />
-                          <p className="text-sm text-gray-600 dark:text-gray-300">
+                          <p className="text-sm text-gray-600 dark:text-gray-300 lg:block hidden">
                             {order.status}
                           </p>
                         </div>

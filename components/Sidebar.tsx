@@ -8,6 +8,7 @@ import {
   Package,
   ChevronRight,
   User,
+  BarChart2,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -51,6 +52,7 @@ export default function Sidebar({ onMobileClose }: SidebarProps) {
       items: [
         { icon: Home, label: "Dashboard", href: "/" },
         { icon: Package, label: "Orders", href: "/orders" },
+
         // { icon: MapPin, label: "Routes", href: "/routes" }, // TODO: Add routes
         // { icon: CreditCard, label: "Payments", href: "/payments" }, // TODO: Add payments
       ],
@@ -58,7 +60,11 @@ export default function Sidebar({ onMobileClose }: SidebarProps) {
     {
       name: "Management",
       items: [
-        { icon: Users, label: "Users", href: "/users" }, // TODO: this should be only for admins
+        ...(user?.role === "ADMIN" || user?.role === "WORKER"
+          ? [{ icon: Users, label: "Users", href: "/users" }]
+          : []),
+        { icon: BarChart2, label: "My Stats", href: "/stats" },
+
         // { icon: Folder, label: "Projects", href: "/projects" }, // TODO: Add projects
       ],
     },

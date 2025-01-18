@@ -29,6 +29,7 @@ enum OrderStatus {
   RETURNED
   COMPLETED
   APPROVED
+  PURCHASED
   REJECTED
   PENDING
   IN_TRANSIT
@@ -54,20 +55,22 @@ model User {
 }
 
 model Order {
-  id          Int         @id @default(autoincrement())
-  title       String
-  size        String?
-  color       String?
-  quantity    Int         @default(1)
-  price       Float
-  status      OrderStatus @default(PENDING)
-  productLink String?
-  imageUrl    String?
-  notes       String?
-  user        User        @relation(fields: [userId], references: [id])
-  userId      Int
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id                 Int         @id @default(autoincrement())
+  title              String?
+  size               String?
+  color              String?
+  quantity           Int         @default(1)
+  price              Float       @default(0)
+  shippingPrice      Float       @default(0)
+  localShippingPrice Float       @default(0)
+  status             OrderStatus @default(PENDING)
+  productLink        String?
+  imageUrl           String?
+  notes              String?
+  user               User        @relation(fields: [userId], references: [id])
+  userId             Int
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
 
   @@index([userId])
   @@index([status])

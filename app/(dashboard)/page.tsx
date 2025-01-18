@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useApp } from "@/providers/AppProvider";
 import {
   Package,
@@ -12,49 +13,79 @@ import {
   ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
+import Cookies from "js-cookie";
+import { Skeleton } from "@/components/ui/skeleton";
+
+interface DashboardData {
+  stats: {
+    totalOrders: number;
+    totalSpent: number;
+    activeOrders: number;
+    deliveredOrders: number;
+  };
+  recentOrders: {
+    id: number;
+    title: string;
+    status: string;
+    total: number;
+    items: number;
+    createdAt: string;
+  }[];
+}
 
 export default function DashboardPage() {
   const { user } = useApp();
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data - Replace with actual API calls
-  const orderStats = {
-    totalOrders: 5,
-    totalSpent: 389.97,
-    activeOrders: 2,
-    deliveredOrders: 3,
-  };
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const token = Cookies.get("token");
+        if (!token) return;
 
-  const recentOrders = [
-    {
-      id: "ORD001",
-      date: "2024-01-17",
-      status: "Delivered",
-      total: "$150.00",
-      items: 3,
-    },
-    {
-      id: "ORD002",
-      date: "2024-01-15",
-      status: "Processing",
-      total: "$85.50",
-      items: 2,
-    },
-    {
-      id: "ORD003",
-      date: "2024-01-12",
-      status: "Processing",
-      total: "$220.00",
-      items: 4,
-    },
-  ];
+        const response = await fetch("/api/user/stats", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) throw new Error("Failed to fetch dashboard data");
+
+        const dashboardData = await response.json();
+        setData({
+          stats: {
+            totalOrders: dashboardData.stats.totalOrders,
+            totalSpent: dashboardData.recentOrders.reduce(
+              (total: number, order: DashboardData["recentOrders"][0]) =>
+                total + order.total,
+              0
+            ),
+            activeOrders: dashboardData.recentOrders.filter(
+              (order: DashboardData["recentOrders"][0]) =>
+                order.status === "PROCESSING"
+            ).length,
+            deliveredOrders: dashboardData.stats.deliveredOrders,
+          },
+          recentOrders: dashboardData.recentOrders,
+        });
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
 
   const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "delivered":
+    switch (status) {
+      case "DELIVERED":
         return "text-green-500";
-      case "processing":
+      case "PROCESSING":
         return "text-yellow-500";
-      case "cancelled":
+      case "CANCELLED":
         return "text-red-500";
       default:
         return "text-gray-500";
@@ -62,20 +93,101 @@ export default function DashboardPage() {
   };
 
   const getStatusIcon = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "delivered":
+    switch (status) {
+      case "DELIVERED":
         return <CheckCircle className="w-5 h-5 text-green-500" />;
-      case "processing":
+      case "PROCESSING":
         return <Clock className="w-5 h-5 text-yellow-500" />;
-      case "cancelled":
+      case "CANCELLED":
         return <XCircle className="w-5 h-5 text-red-500" />;
       default:
         return <AlertCircle className="w-5 h-5 text-gray-500" />;
     }
   };
 
+  if (loading || !data) {
+    return (
+      <div className="min-h-screen bg-gray-50/50 dark:bg-gray-900/50 py-6 px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Welcome Section Skeleton */}
+          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <Skeleton className="h-8 w-48 mb-2" />
+                <Skeleton className="h-4 w-64" />
+              </div>
+              <Skeleton className="h-10 w-32" />
+            </div>
+          </div>
+
+          {/* Stats Grid Skeleton */}
+          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div
+                key={index}
+                className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm p-6"
+              >
+                <div className="flex items-center gap-4">
+                  <Skeleton className="w-12 h-12 rounded-2xl" />
+                  <div>
+                    <Skeleton className="h-4 w-24 mb-1" />
+                    <Skeleton className="h-6 w-16" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Recent Orders Skeleton */}
+          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2">
+                <Skeleton className="w-5 h-5" />
+                <Skeleton className="h-6 w-32" />
+              </div>
+              <Skeleton className="h-4 w-16" />
+            </div>
+
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="bg-gray-50 dark:bg-gray-700/50 rounded-2xl p-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="w-10 h-10 rounded-xl" />
+                      <div>
+                        <Skeleton className="h-4 w-24 mb-2" />
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="w-3.5 h-3.5 rounded-full" />
+                          <Skeleton className="h-3 w-20" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-6">
+                      <div className="text-right">
+                        <Skeleton className="h-4 w-16 mb-1" />
+                        <Skeleton className="h-3 w-12" />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-4 w-20" />
+                        <Skeleton className="w-4 h-4" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50/50 dark:bg-gray-900/50 py-6 px-4 sm:px-6">
+    <div className="min-h-screen bg-gray-50/50 dark:bg-gray-900/50 py-6 px-4 sm:px-6 lg:mt-0 mt-12">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Welcome Section */}
         <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm p-6">
@@ -111,7 +223,7 @@ export default function DashboardPage() {
                   Total Orders
                 </p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {orderStats.totalOrders}
+                  {data.stats.totalOrders}
                 </p>
               </div>
             </div>
@@ -128,7 +240,7 @@ export default function DashboardPage() {
                   Total Spent
                 </p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  ${orderStats.totalSpent}
+                  ${data.stats.totalSpent.toFixed(2)}
                 </p>
               </div>
             </div>
@@ -138,14 +250,14 @@ export default function DashboardPage() {
           <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm p-6">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center">
-                <Package className="w-6 h-6 text-blue-500" />
+                <Package className="w-6 h-6 text-blue-400" />
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                  Active Orders
+                  Processing Orders
                 </p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {orderStats.activeOrders}
+                  {data.stats.activeOrders}
                 </p>
               </div>
             </div>
@@ -162,7 +274,7 @@ export default function DashboardPage() {
                   Delivered
                 </p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {orderStats.deliveredOrders}
+                  {data.stats.deliveredOrders}
                 </p>
               </div>
             </div>
@@ -187,7 +299,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="space-y-3">
-            {recentOrders.map((order) => (
+            {data.recentOrders.map((order) => (
               <Link
                 key={order.id}
                 href={`/orders/${order.id}`}
@@ -204,7 +316,7 @@ export default function DashboardPage() {
                         <div className="flex items-center gap-2 mt-1">
                           <Clock className="w-3.5 h-3.5 text-gray-400" />
                           <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {new Date(order.date).toLocaleDateString()}
+                            {new Date(order.createdAt).toLocaleDateString()}
                           </p>
                         </div>
                       </div>
@@ -213,7 +325,7 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-6">
                       <div className="text-right">
                         <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          {order.total}
+                          ${order.total.toFixed(2)}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
                           {order.items} items

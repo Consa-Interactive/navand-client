@@ -8,19 +8,28 @@ import {
   TransitionChild,
 } from "@headlessui/react";
 import { Fragment } from "react";
-import { X, Package, MapPin } from "lucide-react";
+import { X, Package, Phone } from "lucide-react";
+import Image from "next/image";
 
 export interface OrderDetails {
-  id: string;
+  id: number;
   title: string;
   size?: string;
   color?: string;
   quantity: number;
   price: number;
-  status: "Confirmed" | "Processing" | "Shipped" | "Delivered" | "Cancelled";
-  country: string;
-  customerName: string;
-  orderDate: string;
+  shippingPrice: number;
+  localShippingPrice: number;
+  status: string;
+  productLink?: string;
+  imageUrl?: string;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  user: {
+    name: string;
+    phoneNumber: string;
+  };
 }
 
 interface OrderDetailsModalProps {
@@ -29,8 +38,7 @@ interface OrderDetailsModalProps {
   order: OrderDetails;
 }
 
-// Add formatDate function
-const formatDate = (date: Date) => {
+const formatDate = (date: string) => {
   return new Intl.DateTimeFormat("en-US", {
     year: "numeric",
     month: "2-digit",
@@ -38,7 +46,7 @@ const formatDate = (date: Date) => {
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
-  }).format(date);
+  }).format(new Date(date));
 };
 
 export default function OrderDetailsModal({
@@ -80,7 +88,7 @@ export default function OrderDetailsModal({
                       Order #{order.id}
                     </DialogTitle>
                     <p className="mt-1 text-sm text-gray-500">
-                      Placed on {formatDate(new Date(order.orderDate))}
+                      Placed on {formatDate(order.createdAt.toString())}
                     </p>
                   </div>
                   <button
@@ -94,20 +102,36 @@ export default function OrderDetailsModal({
                 <div className="mt-6 space-y-6">
                   {/* Status Banner */}
                   <div
-                    className={`rounded-lg bg-${
-                      order.status === "Cancelled" ? "red" : "blue"
-                    }-50 p-4 dark:bg-${
-                      order.status === "Cancelled" ? "red" : "blue"
-                    }-900/20`}
+                    className={`rounded-xl ${
+                      order.status === "CANCELLED"
+                        ? "bg-red-50 dark:bg-red-900/20"
+                        : order.status === "DELIVERED"
+                        ? "bg-green-50 dark:bg-green-900/20"
+                        : order.status === "PURCHASED"
+                        ? "bg-pink-50 dark:bg-pink-900/20"
+                        : order.status === "PROCESSING"
+                        ? "bg-yellow-50 dark:bg-yellow-900/20"
+                        : order.status === "SHIPPED"
+                        ? "bg-purple-50 dark:bg-purple-900/20"
+                        : "bg-blue-50 dark:bg-blue-900/20"
+                    } p-4`}
                   >
                     <div className="flex items-center justify-between">
                       <div>
                         <p
-                          className={`text-sm font-medium text-${
-                            order.status === "Cancelled" ? "red" : "blue"
-                          }-700 dark:text-${
-                            order.status === "Cancelled" ? "red" : "blue"
-                          }-500`}
+                          className={`text-sm font-medium ${
+                            order.status === "CANCELLED"
+                              ? "text-red-700 dark:text-red-500"
+                              : order.status === "DELIVERED"
+                              ? "text-green-700 dark:text-green-500"
+                              : order.status === "PURCHASED"
+                              ? "text-pink-700 dark:text-pink-500"
+                              : order.status === "PROCESSING"
+                              ? "text-yellow-700 dark:text-yellow-500"
+                              : order.status === "SHIPPED"
+                              ? "text-purple-700 dark:text-purple-500"
+                              : "text-blue-700 dark:text-blue-400"
+                          }`}
                         >
                           Order Status
                         </p>
@@ -116,19 +140,29 @@ export default function OrderDetailsModal({
                         </p>
                       </div>
                       <Package
-                        className={`h-8 w-8 text-${
-                          order.status === "Cancelled" ? "red" : "blue"
-                        }-500`}
+                        className={`h-8 w-8 ${
+                          order.status === "CANCELLED"
+                            ? "text-red-500"
+                            : order.status === "DELIVERED"
+                            ? "text-green-500"
+                            : order.status === "PURCHASED"
+                            ? "text-pink-500"
+                            : order.status === "PROCESSING"
+                            ? "text-yellow-500"
+                            : order.status === "SHIPPED"
+                            ? "text-purple-500"
+                            : "text-blue-400"
+                        }`}
                       />
                     </div>
                   </div>
 
                   {/* Customer Info */}
-                  <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                  <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
                     <div className="flex items-center gap-4">
                       <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-full bg-gradient-to-r from-orange-400 to-orange-600">
                         <span className="absolute inset-0 flex items-center justify-center text-base font-medium text-white">
-                          {order.customerName
+                          {order.user.name
                             .split(" ")
                             .map((n) => n[0])
                             .join("")}
@@ -136,31 +170,53 @@ export default function OrderDetailsModal({
                       </div>
                       <div className="flex-grow">
                         <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                          {order.customerName}
+                          {order.user.name}
                         </h3>
                         <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
-                          <MapPin className="h-4 w-4" />
-                          {order.country}
+                          <Phone className="h-4 w-4" />
+                          {order.user.phoneNumber}
                         </div>
                       </div>
                     </div>
                   </div>
 
                   {/* Product Details */}
-                  <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                  <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
                     <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                       Product Details
                     </h3>
                     <div className="mt-4 flex items-start gap-4">
-                      <div className="h-24 w-24 flex-shrink-0 rounded-lg bg-gray-100 dark:bg-gray-700">
-                        <div className="flex h-full items-center justify-center">
-                          <Package className="h-12 w-12 text-gray-400" />
+                      {order.imageUrl ? (
+                        <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
+                          <Image
+                            src={order.imageUrl}
+                            alt={order.title}
+                            className="h-full w-full object-cover"
+                            width={100}
+                            height={100}
+                          />
                         </div>
-                      </div>
+                      ) : (
+                        <div className="h-24 w-24 flex-shrink-0 rounded-xl bg-gray-100 dark:bg-gray-700">
+                          <div className="flex h-full items-center justify-center">
+                            <Package className="h-12 w-12 text-gray-400" />
+                          </div>
+                        </div>
+                      )}
                       <div className="flex-grow">
                         <h4 className="font-medium text-gray-900 dark:text-white">
                           {order.title}
                         </h4>
+                        {order.productLink && (
+                          <a
+                            href={order.productLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-1 text-sm text-primary hover:underline"
+                          >
+                            View Product Link
+                          </a>
+                        )}
                         <div className="mt-2 flex flex-wrap gap-2">
                           {order.size && (
                             <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-200">
@@ -169,7 +225,7 @@ export default function OrderDetailsModal({
                           )}
                           {order.color && (
                             <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-200">
-                              {order.color}
+                              Color: {order.color}
                             </span>
                           )}
                           <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-200">
@@ -189,10 +245,12 @@ export default function OrderDetailsModal({
                   </div>
 
                   {/* Order Summary */}
-                  <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-900/50">
+                  <div className="rounded-xl bg-gray-50 p-4 dark:bg-gray-900/50">
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-500">Subtotal</span>
+                        <span className="text-gray-500">
+                          Subtotal ({order.quantity} items)
+                        </span>
                         <span className="font-medium text-gray-900 dark:text-white">
                           ${(order.price * order.quantity).toFixed(2)}
                         </span>
@@ -200,7 +258,16 @@ export default function OrderDetailsModal({
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-gray-500">Shipping</span>
                         <span className="font-medium text-gray-900 dark:text-white">
-                          Free
+                          ${(order.shippingPrice * order.quantity).toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-500">Local Shipping</span>
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          $
+                          {(order.localShippingPrice * order.quantity).toFixed(
+                            2
+                          )}
                         </span>
                       </div>
                       <div className="border-t border-gray-200 pt-2 dark:border-gray-700">
@@ -209,12 +276,29 @@ export default function OrderDetailsModal({
                             Total
                           </span>
                           <span className="text-xl font-semibold text-gray-900 dark:text-white">
-                            ${(order.price * order.quantity).toFixed(2)}
+                            $
+                            {(
+                              order.price * order.quantity +
+                              order.shippingPrice * order.quantity +
+                              order.localShippingPrice * order.quantity
+                            ).toFixed(2)}
                           </span>
                         </div>
                       </div>
                     </div>
                   </div>
+
+                  {/* Notes */}
+                  {order.notes && order.notes !== "N/A" && (
+                    <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                        Notes
+                      </h3>
+                      <p className="mt-2 text-sm text-gray-500">
+                        {order.notes}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </DialogPanel>
             </TransitionChild>

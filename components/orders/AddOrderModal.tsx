@@ -1,39 +1,131 @@
 "use client";
 
-import { X, Upload, Link as LinkIcon, User } from "lucide-react";
-import { useState } from "react";
+import { X, Upload, Link as LinkIcon } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
+import Cookies from "js-cookie";
+import { Role } from "@prisma/client";
+import { useApp } from "@/providers/AppProvider";
 
 interface AddOrderModalProps {
   isOpen: boolean;
   onClose: () => void;
-  userRole?: "admin" | "worker" | "customer";
-  currentUser?: {
-    id: string;
-    name: string;
-    email: string;
-  };
+  userRole?: Role;
+  onOrderAdded?: () => Promise<void>;
 }
-
-// Mock customers data - will be replaced with API call later
-const mockCustomers = [
-  { id: "1", name: "John Doe", email: "john@example.com" },
-  { id: "2", name: "Jane Smith", email: "jane@example.com" },
-  { id: "3", name: "Alice Johnson", email: "alice@example.com" },
-];
 
 export default function AddOrderModal({
   isOpen,
   onClose,
-  userRole = "customer",
+  userRole = "CUSTOMER",
+  onOrderAdded,
 }: AddOrderModalProps) {
+  const { user } = useApp();
   const [dragActive, setDragActive] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [selectedCustomer, setSelectedCustomer] = useState<
-    (typeof mockCustomers)[0] | null
-  >(null);
-  const [customerSearch, setCustomerSearch] = useState("");
-  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [customers, setCustomers] = useState<
+    Array<{ id: string; name: string; phoneNumber: string }>
+  >([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingCustomers, setIsLoadingCustomers] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        searchInputRef.current &&
+        dropdownRef.current &&
+        !searchInputRef.current.contains(event.target as Node) &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const fetchCustomers = async (
+    searchQuery: string,
+    pageNum: number,
+    append = false
+  ) => {
+    try {
+      setIsLoadingCustomers(true);
+      const token = Cookies.get("token");
+      const response = await fetch(
+        `/api/users?role=CUSTOMER&search=${searchQuery}&page=${pageNum}&limit=10`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setCustomers((prev) =>
+          append ? [...prev, ...data.users] : data.users
+        );
+        setHasMore(data.hasMore);
+      }
+    } catch (err) {
+      console.error("Error fetching customers:", err);
+    } finally {
+      setIsLoadingCustomers(false);
+    }
+  };
+
+  // Handle search input change
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+      fetchCustomers(searchTerm, 1);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Handle initial load and infinite scroll
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;
+    if (
+      scrollHeight - scrollTop <= clientHeight * 1.5 &&
+      hasMore &&
+      !isLoadingCustomers
+    ) {
+      setPage((prev) => prev + 1);
+      fetchCustomers(searchTerm, page + 1, true);
+    }
+  };
+
+  // Form state
+  const [formData, setFormData] = useState({
+    size: "",
+    color: "",
+    quantity: 1,
+    price: 0,
+    productLink: "",
+    notes: "",
+    customer: "",
+  });
+
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -73,11 +165,56 @@ export default function AddOrderModal({
     }
   };
 
-  const filteredCustomers = mockCustomers.filter(
-    (customer) =>
-      customer.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
-      customer.email.toLowerCase().includes(customerSearch.toLowerCase())
-  );
+  const handleSubmit = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const token = Cookies.get("token");
+      if (!token) {
+        throw new Error("No authentication token found");
+      }
+
+      // For admin/worker roles, customer selection is required
+      if (
+        (userRole === "ADMIN" || userRole === "WORKER") &&
+        !formData.customer
+      ) {
+        // if no customer is selected
+        // add current user to customer data
+        formData.customer = user!.id.toString();
+      }
+
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          ...formData,
+          imageUrl: uploadedImage,
+          userId: formData.customer || undefined, // Use selected customer ID or undefined for regular users
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create order");
+      }
+
+      // Success
+      onClose();
+      if (onOrderAdded) {
+        await onOrderAdded();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -105,58 +242,6 @@ export default function AddOrderModal({
           </div>
 
           <div className="p-4 space-y-6">
-            {/* Customer Selection for Admin/Worker */}
-            {(userRole === "admin" || userRole === "worker") && (
-              <div className="relative">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  Customer
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={customerSearch}
-                    onChange={(e) => {
-                      setCustomerSearch(e.target.value);
-                      setShowCustomerDropdown(true);
-                    }}
-                    onFocus={() => setShowCustomerDropdown(true)}
-                    placeholder="Search customer..."
-                    className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary dark:focus:ring-primary/30 transition-all text-sm"
-                  />
-                  <User className="absolute left-2.5 top-2.5 w-4 h-4 text-gray-400" />
-                </div>
-
-                {/* Customer Dropdown */}
-                {showCustomerDropdown && (
-                  <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg">
-                    {filteredCustomers.map((customer) => (
-                      <button
-                        key={customer.id}
-                        onClick={() => {
-                          setSelectedCustomer(customer);
-                          setCustomerSearch(customer.name);
-                          setShowCustomerDropdown(false);
-                        }}
-                        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700"
-                      >
-                        <div className="font-medium text-gray-900 dark:text-white">
-                          {customer.name}
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {customer.email}
-                        </div>
-                      </button>
-                    ))}
-                    {filteredCustomers.length === 0 && (
-                      <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
-                        No customers found
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
             {/* Image Upload */}
             <div
               className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all
@@ -215,6 +300,68 @@ export default function AddOrderModal({
 
             {/* Form Fields */}
             <div className="space-y-4">
+              {(userRole === "ADMIN" || userRole === "WORKER") && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                    Customer
+                  </label>
+                  <div className="relative">
+                    <input
+                      ref={searchInputRef}
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      onFocus={() => setIsDropdownOpen(true)}
+                      placeholder="Search customers..."
+                      className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary dark:focus:ring-primary/30 transition-all text-sm"
+                    />
+                    {isDropdownOpen && (
+                      <div
+                        ref={dropdownRef}
+                        className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-lg z-[60]"
+                        onScroll={handleScroll}
+                      >
+                        {customers.map((customer) => (
+                          <div
+                            key={customer.id}
+                            onClick={() => {
+                              setFormData((prev) => ({
+                                ...prev,
+                                customer: customer.id,
+                              }));
+                              setIsDropdownOpen(false);
+                              setSearchTerm(customer.name);
+                            }}
+                            className={`px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                              formData.customer === customer.id
+                                ? "bg-primary/10 dark:bg-primary/20"
+                                : ""
+                            }`}
+                          >
+                            <div className="font-medium">{customer.name}</div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                              {customer.phoneNumber}
+                            </div>
+                          </div>
+                        ))}
+                        {isLoadingCustomers && (
+                          <div className="p-2 text-center text-sm text-gray-500 dark:text-gray-400">
+                            Loading...
+                          </div>
+                        )}
+                        {!isLoadingCustomers &&
+                          customers.length === 0 &&
+                          searchTerm && (
+                            <div className="p-2 text-center text-sm text-gray-500 dark:text-gray-400">
+                              No customers found
+                            </div>
+                          )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                   Product Link
@@ -222,6 +369,9 @@ export default function AddOrderModal({
                 <div className="relative">
                   <input
                     type="url"
+                    name="productLink"
+                    value={formData.productLink}
+                    onChange={handleInputChange}
                     className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary dark:focus:ring-primary/30 transition-all text-sm"
                     placeholder="https://example.com/product"
                   />
@@ -236,6 +386,9 @@ export default function AddOrderModal({
                   </label>
                   <input
                     type="text"
+                    name="size"
+                    value={formData.size}
+                    onChange={handleInputChange}
                     className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary dark:focus:ring-primary/30 transition-all text-sm"
                     placeholder="42"
                   />
@@ -246,22 +399,30 @@ export default function AddOrderModal({
                   </label>
                   <input
                     type="text"
+                    name="color"
+                    value={formData.color}
+                    onChange={handleInputChange}
                     className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary dark:focus:ring-primary/30 transition-all text-sm"
                     placeholder="White/Gray"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  Quantity
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary dark:focus:ring-primary/30 transition-all text-sm"
-                  placeholder="1"
-                />
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                    Quantity
+                  </label>
+                  <input
+                    type="number"
+                    name="quantity"
+                    value={formData.quantity}
+                    onChange={handleInputChange}
+                    min="1"
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary dark:focus:ring-primary/30 transition-all text-sm"
+                    placeholder="1"
+                  />
+                </div>
               </div>
 
               <div>
@@ -269,11 +430,20 @@ export default function AddOrderModal({
                   Notes
                 </label>
                 <textarea
+                  name="notes"
+                  value={formData.notes}
+                  onChange={handleInputChange}
                   rows={3}
                   className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary dark:focus:ring-primary/30 transition-all resize-none text-sm"
                   placeholder="Add any additional notes here..."
                 />
               </div>
+
+              {error && (
+                <div className="text-sm text-red-500 dark:text-red-400">
+                  {error}
+                </div>
+              )}
             </div>
           </div>
 
@@ -285,13 +455,11 @@ export default function AddOrderModal({
               Cancel
             </button>
             <button
-              className="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-orange-600/90 rounded-xl active:bg-primary/95 transition-colors"
-              disabled={
-                (userRole === "admin" || userRole === "worker") &&
-                !selectedCustomer
-              }
+              onClick={handleSubmit}
+              disabled={loading || !formData.productLink}
+              className="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-orange-600/90 rounded-xl active:bg-primary/95 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Add Order
+              {loading ? "Adding..." : "Add Order"}
             </button>
           </div>
         </div>
