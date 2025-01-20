@@ -360,7 +360,7 @@ export default function StatsPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-blue-500" />
+                  <TrendingUp className="w-6 h-6 text-blue-400" />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">

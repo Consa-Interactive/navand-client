@@ -37,7 +37,6 @@ import EditOrderModal from "@/components/orders/EditOrderModal";
 import { useApp } from "@/providers/AppProvider";
 import SetPriceModal from "@/components/orders/SetPriceModal";
 import OrderActionModal from "@/components/orders/OrderActionModal";
-import { Role } from "@prisma/client";
 
 type OrderStatus =
   | "PENDING"
@@ -64,6 +63,7 @@ interface OrderItem {
   createdAt: Date;
   updatedAt: Date;
   userId: number;
+  prepaid: boolean;
   user: {
     name: string;
     phoneNumber: string;
@@ -107,6 +107,11 @@ const statusColors = {
     bg: "bg-emerald-50 dark:bg-emerald-900/20",
     text: "text-emerald-700 dark:text-emerald-500",
     dot: "bg-emerald-500",
+  },
+  PREPAID: {
+    bg: "bg-indigo-50 dark:bg-indigo-900/20",
+    text: "text-indigo-700 dark:text-indigo-500",
+    dot: "bg-indigo-500",
   },
 };
 
@@ -157,6 +162,7 @@ const ActionsCell = ({
   isAdmin,
   setSelectedOrderForPrice,
   setSelectedOrderForAction,
+  refreshOrders,
 }: {
   row: Row<Order>;
   setSelectedOrder: (order: Order) => void;
@@ -164,10 +170,37 @@ const ActionsCell = ({
   isAdmin: boolean;
   setSelectedOrderForPrice: (order: Order) => void;
   setSelectedOrderForAction: (order: Order) => void;
+  refreshOrders: () => Promise<void>;
 }) => {
   const order = row.original;
   const canSetPrice = isAdmin && order.status === "PENDING";
   const canConfirmOrder = order.status === "PROCESSING";
+  const canTogglePrepaid = isAdmin && order.status !== "CANCELLED";
+
+  const handlePrepaidClick = async () => {
+    try {
+      const token = Cookies.get("token");
+      const response = await fetch(`/api/orders/${order.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          prepaid: !order.prepaid,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update prepaid status");
+      }
+
+      // Refresh orders instead of reloading the page
+      await refreshOrders();
+    } catch (error) {
+      console.error("Error updating prepaid status:", error);
+    }
+  };
 
   return (
     <div className="flex items-center justify-end gap-2">
@@ -206,6 +239,20 @@ const ActionsCell = ({
           title="Confirm/Reject Order"
         >
           <CheckCircle className="h-4 w-4" />
+        </button>
+      )}
+
+      {canTogglePrepaid && (
+        <button
+          onClick={handlePrepaidClick}
+          className={`rounded-lg p-2 ${
+            order.prepaid
+              ? "text-indigo-400 hover:bg-indigo-100 hover:text-indigo-500 dark:hover:bg-indigo-900/20"
+              : "text-gray-400 hover:bg-gray-100 hover:text-gray-500 dark:hover:bg-gray-700"
+          }`}
+          title={order.prepaid ? "Mark as Not Prepaid" : "Mark as Prepaid"}
+        >
+          <DollarSign className="h-4 w-4" />
         </button>
       )}
     </div>
@@ -427,10 +474,11 @@ export default function OrdersPage() {
         <ActionsCell
           row={row}
           setSelectedOrder={setSelectedOrder}
-          onEditOrder={setSelectedOrderForEdit}
+          onEditOrder={(order) => setSelectedOrderForEdit(order)}
           isAdmin={isAdmin}
           setSelectedOrderForPrice={setSelectedOrderForPrice}
           setSelectedOrderForAction={setSelectedOrderForAction}
+          refreshOrders={refreshOrders}
         />
       ),
     }),
@@ -770,8 +818,7 @@ export default function OrdersPage() {
       <AddOrderModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onOrderAdded={refreshOrders}
-        userRole={user?.role as Role}
+        onOrderCreated={refreshOrders}
       />
 
       {/* Order Details Modal */}

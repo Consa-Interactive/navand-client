@@ -38,19 +38,20 @@ enum OrderStatus {
 }
 
 model User {
-  id          Int       @id @default(autoincrement())
-  phoneNumber String    @unique
-  name        String
-  password    String
-  address     String?
-  city        String?
-  country     String?
-  role        Role      @default(CUSTOMER)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  orders      Order[]
-  isActive    Boolean   @default(true)
-  lastLogin   DateTime?
+  id           Int            @id @default(autoincrement())
+  phoneNumber  String         @unique
+  name         String
+  password     String
+  address      String?
+  city         String?
+  country      String?
+  role         Role           @default(CUSTOMER)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  orders       Order[]
+  isActive     Boolean        @default(true)
+  lastLogin    DateTime?
+  Announcement Announcement[]
 }
 
 model Order {
@@ -70,7 +71,47 @@ model Order {
   userId             Int
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
+  prepaid            Boolean     @default(false)
 
   @@index([userId])
   @@index([status])
+}
+
+enum AnnouncementCategory {
+  INFO
+  UPDATE
+  ALERT
+}
+
+model Announcement {
+  id          Int                  @id @default(autoincrement())
+  title       String
+  content     String
+  category    AnnouncementCategory @default(INFO)
+  isImportant Boolean              @default(false)
+  expiresAt   DateTime?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  createdBy   User                 @relation(fields: [userId], references: [id])
+  userId      Int
+  isActive    Boolean              @default(true)
+
+  @@index([userId])
+  @@index([category])
+  @@index([isActive])
+}
+
+model Banner {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String
+  imageUrl    String
+  link        String?
+  isActive    Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([order])
 }

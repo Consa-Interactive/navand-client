@@ -247,6 +247,8 @@ export default function CreateUserModal({
                   className="w-full pl-16 pr-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200"
                   placeholder="750XXXXXXX"
                   required
+                  maxLength={10}
+                  minLength={10}
                 />
               </div>
             </div>

@@ -21,8 +21,6 @@ export async function GET(req: Request) {
         role: string;
       };
 
-      console.log("Decoded token:", decoded); // For debugging
-
       if (!decoded || !decoded.sub) {
         console.error("Invalid token payload");
         return NextResponse.json({ error: "Invalid token" }, { status: 401 });
@@ -138,8 +136,6 @@ export async function POST(req: Request) {
         sub: string;
         role: string;
       };
-
-      console.log("Decoded token:", decoded); // For debugging
 
       if (!decoded || !decoded.sub) {
         console.error("Invalid token payload");

@@ -8,7 +8,7 @@ import {
   TransitionChild,
 } from "@headlessui/react";
 import { Fragment } from "react";
-import { X, Package, Phone } from "lucide-react";
+import { X, Package, Phone, DollarSign } from "lucide-react";
 import Image from "next/image";
 
 export interface OrderDetails {
@@ -21,6 +21,7 @@ export interface OrderDetails {
   shippingPrice: number;
   localShippingPrice: number;
   status: string;
+  prepaid: boolean;
   productLink?: string;
   imageUrl?: string;
   notes?: string;
@@ -157,6 +158,23 @@ export default function OrderDetailsModal({
                     </div>
                   </div>
 
+                  {/* Prepaid Status */}
+                  {order.prepaid && (
+                    <div className="rounded-xl bg-indigo-50 dark:bg-indigo-900/20 p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-indigo-700 dark:text-indigo-500">
+                            Payment Status
+                          </p>
+                          <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-white">
+                            Prepaid
+                          </p>
+                        </div>
+                        <DollarSign className="h-8 w-8 text-indigo-500" />
+                      </div>
+                    </div>
+                  )}
+
                   {/* Customer Info */}
                   <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
                     <div className="flex items-center gap-4">
@@ -255,13 +273,17 @@ export default function OrderDetailsModal({
                           ${(order.price * order.quantity).toFixed(2)}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-sm">
+
+                      {/* Shipping Price */}
+                      {/* <div className="flex items-center justify-between text-sm">
                         <span className="text-gray-500">Shipping</span>
                         <span className="font-medium text-gray-900 dark:text-white">
                           ${(order.shippingPrice * order.quantity).toFixed(2)}
                         </span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
+                      </div> */}
+
+                      {/* Local Shipping */}
+                      {/* <div className="flex items-center justify-between text-sm">
                         <span className="text-gray-500">Local Shipping</span>
                         <span className="font-medium text-gray-900 dark:text-white">
                           $
@@ -269,7 +291,7 @@ export default function OrderDetailsModal({
                             2
                           )}
                         </span>
-                      </div>
+                      </div> */}
                       <div className="border-t border-gray-200 pt-2 dark:border-gray-700">
                         <div className="flex items-center justify-between">
                           <span className="text-base font-medium text-gray-900 dark:text-white">

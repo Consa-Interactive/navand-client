@@ -120,8 +120,6 @@ export default function EditOrderModal({
         notes: formData.notes,
       };
 
-      console.log("Submitting order update:", updateData);
-
       const response = await fetch(`/api/orders/${order.id}`, {
         method: "PUT",
         headers: {
@@ -135,9 +133,6 @@ export default function EditOrderModal({
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to update order");
       }
-
-      const updatedOrder = await response.json();
-      console.log("Order updated successfully:", updatedOrder);
 
       setOrderUpdates(true);
       onClose();

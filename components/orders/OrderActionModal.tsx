@@ -29,7 +29,6 @@ export default function OrderActionModal({
 
     try {
       const token = Cookies.get("token");
-      console.log(`Setting order status to: ${action}`);
 
       const response = await fetch(`/api/orders/${order.id}`, {
         method: "PUT",
@@ -46,9 +45,6 @@ export default function OrderActionModal({
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to update order");
       }
-
-      const updatedOrder = await response.json();
-      console.log("Order updated successfully:", updatedOrder);
 
       setOrderUpdates(true);
       onClose();

@@ -1,6 +1,5 @@
 "use client";
 
-import { type User } from "@prisma/client";
 import {
   createContext,
   useContext,
@@ -8,24 +7,27 @@ import {
   useState,
   ReactNode,
 } from "react";
+import { User, Order } from "@prisma/client";
 import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
 
 interface AppContextType {
   user: User | null;
+  orders: Order[];
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (token: string) => void;
   logout: () => void;
   refreshUser: () => Promise<void>;
-  setOrderUpdates: (value: boolean) => void;
   orderUpdates: boolean;
+  setOrderUpdates: (value: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [orderUpdates, setOrderUpdates] = useState(false);
   const router = useRouter();
@@ -60,6 +62,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const fetchOrders = async () => {
+    try {
+      const token = Cookies.get("token");
+      const response = await fetch("/api/orders", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setOrders(data);
+      }
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+    }
+  };
+
   const login = (token: string) => {
     Cookies.set("token", token, { expires: 7 });
     refreshUser();
@@ -68,6 +85,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     Cookies.remove("token");
     setUser(null);
+    setOrders([]);
     router.push("/login");
   };
 
@@ -87,19 +105,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Fetch orders when user changes or orderUpdates is triggered
+  useEffect(() => {
+    if (user) {
+      fetchOrders();
+    }
+  }, [user, orderUpdates]);
+
+  // Initial auth check
   useEffect(() => {
     refreshUser();
   }, []);
 
   const value = {
     user,
+    orders,
     isLoading,
     isAuthenticated: !!user,
     login,
     logout,
     refreshUser,
-    setOrderUpdates,
     orderUpdates,
+    setOrderUpdates,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

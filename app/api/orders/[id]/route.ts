@@ -47,7 +47,6 @@ export async function PUT(request: NextRequest) {
 
     // Get request body
     const body = await request.json();
-    console.log("Received update request:", { orderId, body });
 
     // Find existing order
     const existingOrder = await prisma.order.findUnique({
@@ -77,6 +76,11 @@ export async function PUT(request: NextRequest) {
     if (body.productLink !== undefined)
       updateData.productLink = body.productLink;
     if (body.imageUrl !== undefined) updateData.imageUrl = body.imageUrl;
+
+    // Handle prepaid status update
+    if (body.prepaid !== undefined) {
+      updateData.prepaid = body.prepaid;
+    }
 
     // Only update price fields if they are provided and valid numbers
     if (body.price !== undefined) {
@@ -113,8 +117,6 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    console.log("Updating order with data:", updateData);
-
     // Update order
     const updatedOrder = await prisma.order.update({
       where: { id: orderId },
@@ -129,7 +131,6 @@ export async function PUT(request: NextRequest) {
       },
     });
 
-    console.log("Order updated successfully:", updatedOrder);
     return NextResponse.json(updatedOrder);
   } catch (error) {
     console.error("Error details:", {

@@ -35,15 +35,14 @@ import Cookies from "js-cookie";
 interface User {
   id: number;
   name: string;
-  email: string;
   phoneNumber: string;
   role: "ADMIN" | "WORKER" | "CUSTOMER";
-  address?: string;
-  city?: string;
-  country?: string;
-  createdAt: string;
-  updatedAt: string;
-  avatar?: string;
+  address: string | null;
+  city: string | null;
+  country: string | null;
+  imageUrl: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const roleColors = {
@@ -94,7 +93,7 @@ export default function UsersPage() {
         const data = await response.json();
         setData(data.users || []);
       } else if (response.status === 401) {
-        router.push("/auth/login");
+        router.push("/login");
       }
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -105,7 +104,7 @@ export default function UsersPage() {
 
   useEffect(() => {
     if (!user) {
-      router.push("/auth/login");
+      router.push("/login");
       return;
     }
 
@@ -133,7 +132,7 @@ export default function UsersPage() {
           <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-full">
             <Image
               src={
-                info.row.original.avatar ||
+                info.row.original.imageUrl ||
                 "data:image/png;base64,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"
               }
               width={40}
@@ -141,14 +140,6 @@ export default function UsersPage() {
               alt={info.getValue()}
               className="h-full w-full object-cover"
             />
-          </div>
-          <div>
-            <div className="font-medium text-gray-900 dark:text-white">
-              {info.getValue()}
-            </div>
-            <div className="text-sm text-gray-500">
-              {info.row.original.email}
-            </div>
           </div>
         </div>
       ),

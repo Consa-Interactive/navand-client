@@ -12,12 +12,21 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Cookies from "js-cookie";
-import { User } from "@prisma/client";
 
 interface UserEditModalProps {
   isOpen: boolean;
   onClose: () => void;
-  user: User;
+  user: {
+    id: number;
+    name: string;
+    phoneNumber: string;
+    role: "ADMIN" | "WORKER" | "CUSTOMER";
+    address: string | null;
+    city: string | null;
+    country: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  } | null;
   onUserUpdated: () => Promise<void>;
 }
 
@@ -119,7 +128,7 @@ export default function UserEditModal({
         throw new Error("No authentication token found");
       }
 
-      const response = await fetch(`/api/users/${user.id}`, {
+      const response = await fetch(`/api/users/${user?.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

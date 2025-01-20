@@ -20,19 +20,19 @@ export default function DashboardLayout({
         className="fixed left-4 top-3 z-50 rounded-lg bg-white p-2 dark:bg-gray-800 lg:hidden"
       >
         {isMobileMenuOpen ? (
-          <X className="h-6 w-6" />
+          <X className="h-6 w-6 text-gray-600 dark:text-gray-300" />
         ) : (
-          <Menu className="h-6 w-6" />
+          <Menu className="h-6 w-6 text-gray-600 dark:text-gray-300" />
         )}
       </button>
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-40 w-64 transform bg-white shadow-lg transition-transform duration-200 dark:bg-gray-800 lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 w-64 transform bg-white shadow-lg transition-transform duration-200 ease-in-out dark:bg-gray-800 lg:translate-x-0 ${
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <Sidebar />
+        <Sidebar onMobileClose={() => setIsMobileMenuOpen(false)} />
       </div>
 
       {/* Overlay */}

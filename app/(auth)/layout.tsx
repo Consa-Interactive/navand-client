@@ -1,17 +1,26 @@
-import { ReactNode } from "react";
+"use client";
 
-interface AuthLayoutProps {
-  children: ReactNode;
-}
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useApp } from "@/providers/AppProvider";
 
-export default function AuthLayout({ children }: AuthLayoutProps) {
+export default function AuthLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const router = useRouter();
+  const { user } = useApp();
+
+  useEffect(() => {
+    if (user) {
+      router.push("/");
+    }
+  }, [user, router]);
+
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-orange-50 to-white dark:from-gray-900 dark:to-gray-800">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 bg-[radial-gradient(#fb923c10_1px,transparent_1px)] [background-size:16px_16px] dark:bg-[radial-gradient(#fdba7410_1px,transparent_1px)]" />
-
-      {/* Content */}
-      <div className="relative">{children}</div>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 py-12 dark:bg-gray-900 sm:px-6 lg:px-8">
+      {children}
     </div>
   );
 }
