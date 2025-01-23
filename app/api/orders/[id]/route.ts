@@ -8,7 +8,8 @@ const prisma = new PrismaClient();
 export async function PUT(request: NextRequest) {
   try {
     // Get order ID from URL
-    const orderId = parseInt(request.url.split("/").pop() || "");
+    const id = request.nextUrl.pathname.split("/").pop();
+    const orderId = parseInt(id || "");
     if (isNaN(orderId)) {
       return NextResponse.json({ error: "Invalid order ID" }, { status: 400 });
     }
@@ -84,29 +85,65 @@ export async function PUT(request: NextRequest) {
 
     // Only update price fields if they are provided and valid numbers
     if (body.price !== undefined) {
-      const price = Number(body.price);
-      if (!isNaN(price)) {
-        updateData.price = price;
+      const tryPrice = Number(body.price);
+      if (!isNaN(tryPrice)) {
+        // Get latest exchange rate
+        const latestRate = await prisma.exchangeRate.findFirst({
+          orderBy: { createdAt: "desc" },
+        });
+
+        if (!latestRate) {
+          return NextResponse.json(
+            { error: "No exchange rate found" },
+            { status: 400 }
+          );
+        }
+
+        // Convert TRY to USD
+        const usdPrice = tryPrice / latestRate.rate;
+        updateData.price = Number(usdPrice.toFixed(2));
       }
     }
 
+    // Shipping price is already in USD, no conversion needed
     if (body.shippingPrice !== undefined) {
       const shippingPrice = Number(body.shippingPrice);
       if (!isNaN(shippingPrice)) {
-        updateData.shippingPrice = shippingPrice;
+        updateData.shippingPrice = Number(shippingPrice.toFixed(2));
       }
     }
 
     if (body.localShippingPrice !== undefined) {
-      const localShippingPrice = Number(body.localShippingPrice);
-      if (!isNaN(localShippingPrice)) {
-        updateData.localShippingPrice = localShippingPrice;
+      const tryLocalShippingPrice = Number(body.localShippingPrice);
+      if (!isNaN(tryLocalShippingPrice)) {
+        // Get latest exchange rate if not already fetched
+        const latestRate = await prisma.exchangeRate.findFirst({
+          orderBy: { createdAt: "desc" },
+        });
+
+        if (latestRate) {
+          // Convert TRY to USD
+          const usdLocalShippingPrice = tryLocalShippingPrice / latestRate.rate;
+          updateData.localShippingPrice = Number(
+            usdLocalShippingPrice.toFixed(2)
+          );
+        }
       }
     }
 
     // Always update status if provided
     if (body.status) {
       updateData.status = body.status;
+
+      // Create status history entry
+      await prisma.orderStatusHistory.create({
+        data: {
+          status: body.status,
+          notes: body.statusNotes || null,
+          orderId: orderId,
+          userId: parseInt(decoded.sub),
+        },
+      });
     }
 
     // If no valid update data
@@ -128,6 +165,18 @@ export async function PUT(request: NextRequest) {
             phoneNumber: true,
           },
         },
+        statusHistory: {
+          include: {
+            user: {
+              select: {
+                name: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
       },
     });
 
@@ -140,6 +189,87 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json(
       { error: "Failed to update order" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    // Get order ID from URL params
+    const id = request.nextUrl.pathname.split("/").pop();
+    if (isNaN(parseInt(id || ""))) {
+      return NextResponse.json({ error: "Invalid order ID" }, { status: 400 });
+    }
+
+    // Get token from Authorization header
+    const authHeader = request.headers.get("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return NextResponse.json({ error: "No token provided" }, { status: 401 });
+    }
+
+    const token = authHeader.split(" ")[1];
+    if (!token) {
+      return NextResponse.json(
+        { error: "Invalid token format" },
+        { status: 401 }
+      );
+    }
+
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+      sub: string;
+      role: string;
+    };
+
+    if (!decoded || !decoded.sub) {
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    }
+
+    const orderId = parseInt(id || "");
+    if (isNaN(orderId)) {
+      return NextResponse.json({ error: "Invalid order ID" }, { status: 400 });
+    }
+
+    // Get order with user data
+    const order = await prisma.order.findUnique({
+      where: {
+        id: orderId,
+        ...(decoded.role === "CUSTOMER"
+          ? { userId: parseInt(decoded.sub) }
+          : {}),
+      },
+      include: {
+        user: {
+          select: {
+            name: true,
+            phoneNumber: true,
+          },
+        },
+        statusHistory: {
+          include: {
+            user: {
+              select: {
+                name: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(order);
+  } catch (error) {
+    console.error("Error fetching order:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch order" },
       { status: 500 }
     );
   }

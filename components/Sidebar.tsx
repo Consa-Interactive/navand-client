@@ -11,6 +11,7 @@ import {
   BarChart2,
   Megaphone,
   Image,
+  DollarSign,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -49,12 +50,12 @@ export default function Sidebar({ onMobileClose }: SidebarProps) {
         { icon: Package, label: "Orders", href: "/orders" },
       ],
     },
-    {
-      name: "MANAGEMENT",
-      items: [
-        ...(user?.role === "ADMIN" || user?.role === "WORKER"
-          ? [
-              { icon: Users, label: "Users", href: "/users" },
+    ...(user?.role === "ADMIN" || user?.role === "WORKER"
+      ? [
+          {
+            name: "MANAGEMENT",
+            items: [
+              { icon: Users, label: "Customers", href: "/users" },
               {
                 icon: Megaphone,
                 label: "Announcements",
@@ -70,14 +71,19 @@ export default function Sidebar({ onMobileClose }: SidebarProps) {
                 label: "Reports",
                 href: "/reports",
               },
-            ]
-          : []),
-        { icon: BarChart2, label: "My Stats", href: "/stats" },
-      ],
-    },
+              {
+                icon: DollarSign,
+                label: "Exchange Rates",
+                href: "/exchange-rates",
+              },
+            ],
+          },
+        ]
+      : []),
     {
       name: "TOOLS",
       items: [
+        { icon: BarChart2, label: "My Stats", href: "/stats" },
         { icon: User, label: "Profile", href: "/profile" },
         { icon: Settings, label: "Settings", href: "/settings" },
       ],
@@ -87,7 +93,7 @@ export default function Sidebar({ onMobileClose }: SidebarProps) {
   if (!isMounted) return null;
 
   return (
-    <nav className="relative flex h-full flex-col bg-gray-900 text-gray-200">
+    <nav className="print:hidden relative flex h-full flex-col bg-gray-900 text-gray-200">
       {/* Logo Section with enhanced styling */}
       <div className="border-b border-gray-800 bg-gray-900/50 p-6 backdrop-blur-sm">
         <h1 className="flex items-center text-xl font-bold">

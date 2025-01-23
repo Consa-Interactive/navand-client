@@ -124,7 +124,7 @@ export default function UsersPage() {
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
           Name
-          <ArrowUpDown className="h-3 w-3" />
+          <ArrowUpDown className="h-3 w-3 text-gray-500" />
         </div>
       ),
       cell: (info) => (
@@ -141,6 +141,9 @@ export default function UsersPage() {
               className="h-full w-full object-cover"
             />
           </div>
+          <span className="text-sm font-medium text-gray-900 dark:text-white">
+            {info.getValue()}
+          </span>
         </div>
       ),
     }),
@@ -180,7 +183,9 @@ export default function UsersPage() {
       cell: (info) => (
         <div className="flex items-center gap-2">
           <Phone className="h-4 w-4 text-gray-500" />
-          <span>{info.getValue()}</span>
+          <span className="text-sm font-medium text-gray-900 dark:text-white">
+            {info.getValue()}
+          </span>
         </div>
       ),
     }),
@@ -191,7 +196,7 @@ export default function UsersPage() {
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
           Location
-          <ArrowUpDown className="h-3 w-3" />
+          <ArrowUpDown className="h-3 w-3 text-gray-500" />
         </div>
       ),
       cell: (info) => {
@@ -205,7 +210,9 @@ export default function UsersPage() {
         return (
           <div className="flex items-center gap-2">
             <MapPin className="h-4 w-4 text-gray-500" />
-            <span>{address || "No address"}</span>
+            <span className="text-sm font-medium text-gray-900 dark:text-white">
+              {address || "No address"}
+            </span>
           </div>
         );
       },
@@ -217,11 +224,13 @@ export default function UsersPage() {
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
           Join Date
-          <ArrowUpDown className="h-3 w-3" />
+          <ArrowUpDown className="h-3 w-3 text-gray-500" />
         </div>
       ),
       cell: (info) => (
-        <span>{new Date(info.getValue()).toLocaleDateString()}</span>
+        <span className="text-sm font-medium text-gray-900 dark:text-white">
+          {new Date(info.getValue()).toLocaleDateString()}
+        </span>
       ),
     }),
     columnHelper.display({

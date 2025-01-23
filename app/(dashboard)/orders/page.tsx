@@ -27,6 +27,7 @@ import {
   Edit,
   DollarSign,
   CheckCircle,
+  FileText,
 } from "lucide-react";
 import OrderDetailsModal from "@/components/orders/OrderDetailsModal";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -37,6 +38,9 @@ import EditOrderModal from "@/components/orders/EditOrderModal";
 import { useApp } from "@/providers/AppProvider";
 import SetPriceModal from "@/components/orders/SetPriceModal";
 import OrderActionModal from "@/components/orders/OrderActionModal";
+import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 
 type OrderStatus =
   | "PENDING"
@@ -64,6 +68,7 @@ interface OrderItem {
   updatedAt: Date;
   userId: number;
   prepaid: boolean;
+  invoiceId: number | null;
   user: {
     name: string;
     phoneNumber: string;
@@ -278,6 +283,8 @@ export default function OrdersPage() {
     useState<Order | null>(null);
   const { user, orderUpdates } = useApp();
   const isAdmin = user?.role === "ADMIN" || user?.role === "WORKER";
+  const [selectedOrders, setSelectedOrders] = useState<number[]>([]);
+  const router = useRouter();
 
   // Function to refresh orders
   const refreshOrders = async () => {
@@ -325,21 +332,6 @@ export default function OrdersPage() {
   }, [orders, debouncedSearchTerm]);
 
   const columns = [
-    columnHelper.accessor("id", {
-      header: "ID",
-      cell: (info) => (
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            className="rounded border-gray-300 dark:border-gray-700"
-            onClick={(e) => e.stopPropagation()}
-          />
-          <span className="font-medium dark:text-gray-300">
-            {info.getValue()}
-          </span>
-        </div>
-      ),
-    }),
     columnHelper.accessor("title", {
       header: ({ column }) => (
         <div
@@ -501,6 +493,51 @@ export default function OrdersPage() {
     getPaginationRowModel: getPaginationRowModel(),
   });
 
+  const handleOrderSelect = (orderId: number) => {
+    setSelectedOrders((prev) =>
+      prev.includes(orderId)
+        ? prev.filter((id) => id !== orderId)
+        : [...prev, orderId]
+    );
+  };
+
+  const handleCreateInvoice = async () => {
+    try {
+      const response = await fetch("/api/invoices/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${Cookies.get("token")}`,
+        },
+        body: JSON.stringify({
+          orderIds: selectedOrders,
+          paymentMethod: "Cash",
+          notes: "Generated from selected orders",
+          dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to generate invoice");
+      }
+
+      const invoice = await response.json();
+      // Clear selections after successful invoice generation
+      setSelectedOrders([]);
+      // Refresh orders list
+      router.refresh();
+      // Show success toast
+      toast.success("Invoice generated successfully");
+      router.push(`/invoices/${invoice.id}`);
+    } catch (error) {
+      console.error("Error generating invoice:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to generate invoice"
+      );
+    }
+  };
+
   // Loading skeleton - Full page on initial load
   if (loading) {
     return (
@@ -660,6 +697,28 @@ export default function OrdersPage() {
           <table className="w-full border-collapse text-left text-sm">
             <thead>
               <tr>
+                <th className="px-4 py-3 text-left">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      className="rounded border-gray-300"
+                      checked={
+                        orders.length > 0 &&
+                        selectedOrders.length === orders.length
+                      }
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedOrders(orders.map((order) => order.id));
+                        } else {
+                          setSelectedOrders([]);
+                        }
+                      }}
+                    />
+                    <span className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                      Select All
+                    </span>
+                  </div>
+                </th>
                 {table.getFlatHeaders().map((header) => (
                   <th
                     key={header.id}
@@ -733,6 +792,14 @@ export default function OrdersPage() {
                       key={row.id}
                       className="border-b border-gray-200 last:border-none hover:bg-gray-50/50 dark:border-gray-700 dark:hover:bg-gray-700/50"
                     >
+                      <td className="whitespace-nowrap px-4 py-4">
+                        <input
+                          type="checkbox"
+                          className="rounded border-gray-300"
+                          checked={selectedOrders.includes(row.original.id)}
+                          onChange={() => handleOrderSelect(row.original.id)}
+                        />
+                      </td>
                       {row.getVisibleCells().map((cell) => (
                         <td key={cell.id} className="px-4 py-3">
                           {flexRender(
@@ -857,6 +924,23 @@ export default function OrdersPage() {
           onOrderUpdated={fetchOrders}
         />
       )}
+
+      {/* Floating Invoice Button */}
+      <AnimatePresence>
+        {selectedOrders.length > 0 && (
+          <motion.button
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
+            whileHover={{ scale: 1.05 }}
+            onClick={handleCreateInvoice}
+            className="fixed bottom-8 right-8 flex items-center gap-2 bg-primary text-white px-4 py-3 rounded-full shadow-lg transition-colors duration-200"
+          >
+            <FileText className="w-5 h-5" />
+            <span>Generate Invoice ({selectedOrders.length})</span>
+          </motion.button>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
   Link,
@@ -10,21 +11,20 @@ import {
   Upload,
   Phone,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useApp } from "@/providers/AppProvider";
 import Cookies from "js-cookie";
 import Image from "next/image";
-import { useApp } from "@/providers/AppProvider";
+
+const STEPS = [
+  { id: 1, title: "Product Details", icon: Package },
+  { id: 2, title: "Customer Info", icon: User },
+];
 
 interface AddOrderModalProps {
   isOpen: boolean;
   onClose: () => void;
   onOrderCreated: () => Promise<void>;
 }
-
-const STEPS = [
-  { id: 1, title: "Product Details", icon: Package },
-  { id: 2, title: "Customer Info", icon: User },
-];
 
 export default function AddOrderModal({
   isOpen,
@@ -45,16 +45,7 @@ export default function AddOrderModal({
   >([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const loadingRef = useRef<HTMLDivElement>(null);
-
   const [formData, setFormData] = useState({
-    title: "",
     productLink: "",
     size: "",
     color: "",
@@ -63,106 +54,34 @@ export default function AddOrderModal({
     customer: "",
   });
 
-  // Handle click outside search dropdown
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        searchInputRef.current &&
-        dropdownRef.current &&
-        !searchInputRef.current.contains(event.target as Node) &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Setup intersection observer for infinite scroll
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
-          setPage((prev) => prev + 1);
-        }
-      },
-      { threshold: 0.5 }
-    );
-
-    if (loadingRef.current) {
-      observer.observe(loadingRef.current);
-    }
-
-    observerRef.current = observer;
-
-    return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-      }
-    };
-  }, [hasMore, isLoadingMore]);
-
-  // Fetch customers when search term changes or page increases
-  const fetchCustomers = useCallback(
-    async (isNewSearch: boolean = false) => {
-      if (!isAdminOrWorker) {
-        setCustomers([]);
-        setHasMore(false);
-        return;
-      }
-
-      try {
-        setIsLoadingMore(true);
-        const currentPage = isNewSearch ? 1 : page;
-        const token = Cookies.get("token");
-        const response = await fetch(
-          `/api/users?role=CUSTOMER${
-            searchTerm ? `&search=${searchTerm}` : ""
-          }&page=${currentPage}&limit=10`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
+    if (isAdminOrWorker && searchTerm) {
+      const fetchCustomers = async () => {
+        try {
+          const token = Cookies.get("token");
+          const response = await fetch(
+            `/api/users?role=CUSTOMER&search=${searchTerm}`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+          if (response.ok) {
+            const data = await response.json();
+            setCustomers(data.users);
+            setIsDropdownOpen(true);
           }
-        );
-
-        if (response.ok) {
-          const { users, hasMore: moreResults } = await response.json();
-          setCustomers((prev) => (isNewSearch ? users : [...prev, ...users]));
-          setHasMore(moreResults);
-          setIsDropdownOpen(true);
-        } else {
-          console.error("Failed to fetch customers");
-          setCustomers([]);
-          setHasMore(false);
+        } catch (error) {
+          console.error("Failed to fetch customers:", error);
         }
-      } catch (error) {
-        console.error("Error fetching customers:", error);
-        setCustomers([]);
-        setHasMore(false);
-      } finally {
-        setIsLoadingMore(false);
-      }
-    },
-    [searchTerm, page, isAdminOrWorker]
-  );
+      };
 
-  // Handle search term changes
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setPage(1);
-      fetchCustomers(true);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchTerm, fetchCustomers]);
-
-  // Handle page changes
-  useEffect(() => {
-    if (page > 1) {
-      fetchCustomers();
+      const timer = setTimeout(fetchCustomers, 300);
+      return () => clearTimeout(timer);
+    } else {
+      setCustomers([]);
+      setIsDropdownOpen(false);
     }
-  }, [page, fetchCustomers]);
+  }, [searchTerm, isAdminOrWorker]);
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -186,7 +105,7 @@ export default function AddOrderModal({
     }
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
@@ -194,28 +113,55 @@ export default function AddOrderModal({
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
       if (file.type.includes("image")) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          setUploadedImage(event.target?.result as string);
-        };
-        reader.readAsDataURL(file);
+        try {
+          const formData = new FormData();
+          formData.append("file", file);
+
+          const response = await fetch("/api/upload", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (!response.ok) {
+            throw new Error("Failed to upload image");
+          }
+
+          const data = await response.json();
+          setUploadedImage(data.url);
+        } catch (error) {
+          console.error("Upload error:", error);
+          setError("Failed to upload image");
+        }
       }
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setUploadedImage(event.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const response = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to upload image");
+        }
+
+        const data = await response.json();
+        setUploadedImage(data.url);
+      } catch (error) {
+        console.error("Upload error:", error);
+        setError("Failed to upload image");
+      }
     }
   };
 
   const handleNext = () => {
-    // Validate product link in step 1
     if (currentStep === 1) {
       if (!formData.productLink.trim()) {
         setError("Product link is required");
@@ -253,9 +199,13 @@ export default function AddOrderModal({
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          ...formData,
-          imageUrl: uploadedImage,
-          userId: isAdminOrWorker ? formData.customer : user?.id,
+          productLink: formData.productLink,
+          size: formData.size || "",
+          color: formData.color || "",
+          quantity: Number(formData.quantity) || 1,
+          notes: formData.notes || "",
+          imageUrl: uploadedImage || "",
+          userId: isAdminOrWorker ? Number(formData.customer) : user?.id,
         }),
       });
 
@@ -314,8 +264,7 @@ export default function AddOrderModal({
                     ? "border-primary bg-primary/5 scale-[1.02]"
                     : "border-gray-300 dark:border-gray-600"
                 }
-                ${uploadedImage ? "border-success bg-success/5" : ""}
-              `}
+                ${uploadedImage ? "border-success bg-success/5" : ""}`}
               onDragEnter={handleDrag}
               onDragLeave={handleDrag}
               onDragOver={handleDrag}
@@ -448,21 +397,41 @@ export default function AddOrderModal({
                 </label>
                 <div className="relative">
                   <input
-                    ref={searchInputRef}
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    onFocus={() => {
-                      setIsDropdownOpen(true);
-                      if (customers.length === 0) {
-                        setPage(1);
-                        fetchCustomers(true);
-                      }
-                    }}
                     className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200"
                     placeholder="Search by name or phone number..."
                   />
-                  {renderCustomerDropdown()}
+                  {isDropdownOpen && customers.length > 0 && (
+                    <div className="absolute z-50 mt-1 w-full rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                      <div className="max-h-60 overflow-auto py-1">
+                        {customers.map((customer) => (
+                          <button
+                            key={customer.id}
+                            onClick={() => {
+                              setFormData((prev) => ({
+                                ...prev,
+                                customer: customer.id.toString(),
+                              }));
+                              setSearchTerm(
+                                `${customer.name} (${customer.phoneNumber})`
+                              );
+                              setIsDropdownOpen(false);
+                            }}
+                            className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                          >
+                            <div className="font-medium text-gray-900 dark:text-white">
+                              {customer.name}
+                            </div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                              {customer.phoneNumber}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 {formData.customer && (
                   <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -512,57 +481,6 @@ export default function AddOrderModal({
       default:
         return null;
     }
-  };
-
-  const renderCustomerDropdown = () => {
-    if (!isDropdownOpen) return null;
-
-    return (
-      <div
-        ref={dropdownRef}
-        className="absolute z-50 mt-1 w-full rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800"
-      >
-        <div className="max-h-60 overflow-auto py-1">
-          {customers.length === 0 ? (
-            <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
-              No customers found
-            </div>
-          ) : (
-            <>
-              {customers.map((customer) => (
-                <button
-                  key={customer.id}
-                  onClick={() => {
-                    setFormData((prev) => ({
-                      ...prev,
-                      customer: customer.id.toString(),
-                    }));
-                    setSearchTerm(`${customer.name} (${customer.phoneNumber})`);
-                    setIsDropdownOpen(false);
-                  }}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
-                >
-                  <div className="font-medium text-gray-900 dark:text-white">
-                    {customer.name}
-                  </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    {customer.phoneNumber}
-                  </div>
-                </button>
-              ))}
-              {hasMore && (
-                <div
-                  ref={loadingRef}
-                  className="flex items-center justify-center p-2 text-sm text-gray-500 dark:text-gray-400"
-                >
-                  {isLoadingMore ? "Loading more..." : "Scroll for more"}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-    );
   };
 
   if (!isOpen) return null;
@@ -658,7 +576,7 @@ export default function AddOrderModal({
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`px-6 py-2.5 text-sm font-medium rounded-xl border-2 border-primary text-white bg-primary hover:bg-primary/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
+                  className={`px-6 py-2.5 text-sm font-medium rounded-xl border-2 border-primary text-white bg-orange-500 hover:bg-orange-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
                     currentStep === 1 ? "ml-auto" : ""
                   }`}
                 >

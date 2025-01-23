@@ -2,7 +2,13 @@
 
 import { Dialog } from "@headlessui/react";
 import { useState, useEffect, useCallback } from "react";
-import { X, DollarSign, Truck, Navigation, CheckCircle2 } from "lucide-react";
+import {
+  X,
+  Truck,
+  Navigation,
+  CheckCircle2,
+  WalletCardsIcon,
+} from "lucide-react";
 import Cookies from "js-cookie";
 import { Order } from "@prisma/client";
 import { useApp } from "@/providers/AppProvider";
@@ -30,6 +36,28 @@ export default function SetPriceModal({
     localShippingPrice: order.localShippingPrice || 0,
   });
 
+  const [exchangeRate, setExchangeRate] = useState<number | null>(null);
+
+  useEffect(() => {
+    const fetchExchangeRate = async () => {
+      try {
+        const token = Cookies.get("token");
+        const response = await fetch("/api/exchange-rates", {
+          headers: { authorization: `Bearer ${token}` },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.length > 0) {
+            setExchangeRate(data[0].rate);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch exchange rate:", error);
+      }
+    };
+    fetchExchangeRate();
+  }, []);
+
   const handleClose = useCallback(() => {
     setSuccess(false);
     setError("");
@@ -50,11 +78,17 @@ export default function SetPriceModal({
   };
 
   const calculateTotal = () => {
-    return (
-      formData.price * order.quantity +
-      formData.shippingPrice * order.quantity +
-      formData.localShippingPrice * order.quantity
-    ).toFixed(2);
+    if (!exchangeRate) return "0.00";
+
+    // Convert TRY prices to USD
+    const usdPrice = (formData.price / exchangeRate) * order.quantity;
+    const usdLocalShipping =
+      (formData.localShippingPrice / exchangeRate) * order.quantity;
+    // Shipping price is already in USD
+    const usdShipping = formData.shippingPrice * order.quantity;
+
+    const total = usdPrice + usdShipping + usdLocalShipping;
+    return total.toFixed(2);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -210,10 +244,10 @@ export default function SetPriceModal({
                         className="space-y-2"
                       >
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                          Item Price
+                          Item Price ₺
                         </label>
                         <div className="relative">
-                          <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                          <WalletCardsIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                           <input
                             type="number"
                             name="price"

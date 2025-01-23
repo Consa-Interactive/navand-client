@@ -27,7 +27,7 @@ export default function TopHeader() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-gray-200 bg-white px-4 dark:border-gray-700 dark:bg-gray-800 lg:px-8">
+    <header className="print:hidden sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-gray-200 bg-white px-4 dark:border-gray-700 dark:bg-gray-800 lg:px-8">
       <div className="flex items-center space-x-2">
         {/* TODO: Later we can add logo here */}
       </div>
