@@ -35,13 +35,6 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    // +964750xxxxxxx regex
-    if (!/^\+964750\d{7}$/.test(phoneNumber)) {
-      return NextResponse.json(
-        { message: "Invalid phone number format" },
-        { status: 400 }
-      );
-    }
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);

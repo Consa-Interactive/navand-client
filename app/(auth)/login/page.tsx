@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "@/providers/AppProvider";
+import Image from "next/image";
 
 const STEPS = [
   {
@@ -202,7 +203,10 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div
+      id="login"
+      className="min-h-screen flex items-center justify-center p-4"
+    >
       <div className="max-w-md w-full">
         {showSuccess ? (
           <motion.div
@@ -237,12 +241,9 @@ export default function LoginPage() {
         ) : (
           <>
             <div className="text-center mb-8">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Welcome Back
-              </h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                Sign in to your account
-              </p>
+              <span className="flex justify-center ">
+                <Image src="/logo.png" alt="asd" width={125} height={125} />
+              </span>
             </div>
 
             {/* Steps */}

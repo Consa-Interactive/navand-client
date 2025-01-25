@@ -12,6 +12,8 @@ import {
   XCircle,
   Loader2,
 } from "lucide-react";
+import Cookies from "js-cookie";
+import Image from "next/image";
 
 interface Order {
   id: string;
@@ -55,7 +57,13 @@ export default function InvoicePage() {
     const fetchInvoice = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch("/api/invoices");
+        const response = await fetch("/api/invoices", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${Cookies.get("token")!}`,
+          },
+        });
         if (!response.ok) {
           throw new Error("Failed to fetch invoice");
         }
@@ -196,7 +204,8 @@ export default function InvoicePage() {
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col items-center gap-2">
+                <Image src="/logo.png" alt="" width={100} height={100} />
                 <div
                   className={`print:hidden flex items-center gap-2 rounded-full px-4 py-2 ${
                     getStatusColor(invoice.status).bg

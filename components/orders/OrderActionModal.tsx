@@ -92,15 +92,7 @@ export default function OrderActionModal({
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   Quantity: {order.quantity}
                 </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Price: ${order.price}
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Shipping: ${order.shippingPrice}
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Local Shipping: ${order.localShippingPrice}
-                </p>
+
                 <p className="text-sm font-medium text-gray-900 dark:text-white">
                   Total: $
                   {(

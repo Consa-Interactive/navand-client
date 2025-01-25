@@ -7,8 +7,8 @@ import { ThemeProvider } from "@/providers/ThemeProvider";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Ciddili",
-  description: "Ciddili Admin Dashboard",
+  title: "Navand Express",
+  description: "Navand Express shipping application",
 };
 
 export default function RootLayout({

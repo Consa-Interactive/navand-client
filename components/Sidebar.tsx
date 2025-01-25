@@ -4,7 +4,6 @@ import { useApp } from "@/providers/AppProvider";
 import {
   Home,
   Users,
-  Settings,
   Package,
   ChevronRight,
   User,
@@ -16,6 +15,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import NextImg from "next/image";
 
 interface SidebarProps {
   onMobileClose?: () => void;
@@ -85,7 +85,9 @@ export default function Sidebar({ onMobileClose }: SidebarProps) {
       items: [
         { icon: BarChart2, label: "My Stats", href: "/stats" },
         { icon: User, label: "Profile", href: "/profile" },
-        { icon: Settings, label: "Settings", href: "/settings" },
+
+        // TODO: Remove this section
+        // { icon: Settings, label: "Settings", href: "/settings" },
       ],
     },
   ];
@@ -97,8 +99,16 @@ export default function Sidebar({ onMobileClose }: SidebarProps) {
       {/* Logo Section with enhanced styling */}
       <div className="border-b border-gray-800 bg-gray-900/50 p-6 backdrop-blur-sm">
         <h1 className="flex items-center text-xl font-bold">
-          <span className="mr-3 rounded-lg bg-primary p-2 text-white">NE</span>
-          Navand Express
+          {/** TODO: Remove this section */}
+          <span className="mr-2 rounded-xl  p-[1.5px] text-white">
+            <NextImg
+              src="/logo_dark.png"
+              width={125}
+              height={125}
+              alt={"Navand Logo"}
+            />
+          </span>
+          <span className="font-extrabold">Navand Express</span>
         </h1>
       </div>
 

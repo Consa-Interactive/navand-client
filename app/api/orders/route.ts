@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import jwt from "jsonwebtoken";
+import scrapeProductPage from "@/lib/scraper";
 
 const prisma = new PrismaClient();
 
@@ -89,18 +90,25 @@ export async function POST(request: Request) {
       userId = parseInt(decoded.sub);
     }
 
+    const fetchScraper = async () => {
+      const response = await scrapeProductPage(body.productLink);
+      return response;
+    };
+
+    const scraperData = await fetchScraper();
+
     const order = await prisma.order.create({
       data: {
-        title: body.title || "",
-        size: body.size || "",
-        color: body.color || "",
+        title: scraperData.title || "Order-" + prisma.order.count.toString(),
+        size: body.size || "N/A",
+        color: body.color || "N/A",
         quantity: Number(body.quantity) || 1,
         price: 0,
         shippingPrice: Number(body.shippingPrice) || 0,
         localShippingPrice: Number(body.localShippingPrice) || 0,
         status: "PENDING",
         productLink: body.productLink || "",
-        imageUrl: body.imageUrl || "",
+        imageUrl: body.imageUrl || scraperData.image,
         notes: body.notes || "",
         userId: userId,
       },

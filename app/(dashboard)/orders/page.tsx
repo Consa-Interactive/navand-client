@@ -926,21 +926,23 @@ export default function OrdersPage() {
       )}
 
       {/* Floating Invoice Button */}
-      <AnimatePresence>
-        {selectedOrders.length > 0 && (
-          <motion.button
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
-            whileHover={{ scale: 1.05 }}
-            onClick={handleCreateInvoice}
-            className="fixed bottom-8 right-8 flex items-center gap-2 bg-primary text-white px-4 py-3 rounded-full shadow-lg transition-colors duration-200"
-          >
-            <FileText className="w-5 h-5" />
-            <span>Generate Invoice ({selectedOrders.length})</span>
-          </motion.button>
-        )}
-      </AnimatePresence>
+      {isAdmin && selectedOrders.length > 0 && (
+        <AnimatePresence>
+          {selectedOrders.length > 0 && (
+            <motion.button
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              whileHover={{ scale: 1.05 }}
+              onClick={handleCreateInvoice}
+              className="fixed bottom-8 right-8 flex items-center gap-2 bg-primary text-white px-4 py-3 rounded-full shadow-lg transition-colors duration-200"
+            >
+              <FileText className="w-5 h-5" />
+              <span>Generate Invoice ({selectedOrders.length})</span>
+            </motion.button>
+          )}
+        </AnimatePresence>
+      )}
     </div>
   );
 }

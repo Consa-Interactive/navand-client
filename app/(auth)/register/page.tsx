@@ -13,6 +13,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 
 const KURDISTAN_CITIES = [
   { value: "ER", label: "Erbil" },
@@ -363,12 +364,12 @@ export default function RegisterPage() {
         ) : (
           <>
             <div className="text-center mb-8">
+              <span className="flex justify-center ">
+                <Image src="/logo.png" alt="asd" width={115} height={115} />
+              </span>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                 Create an Account
               </h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                Join Navand Express to start shopping
-              </p>
             </div>
 
             {/* Steps */}
@@ -443,7 +444,7 @@ export default function RegisterPage() {
             </form>
 
             <p className="mt-4 text-sm text-center text-gray-500 dark:text-gray-400">
-              Already have an account?{" "}
+              Already have an account?
               <Link
                 href="/login"
                 className="text-primary hover:text-primary/80 font-medium"

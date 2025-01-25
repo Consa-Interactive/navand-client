@@ -19,8 +19,10 @@ export default function AuthLayout({
   }, [user, router]);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 py-12 dark:bg-gray-900 sm:px-6 lg:px-8">
-      {children}
-    </div>
+    <body>
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 py-12 dark:bg-gray-900 sm:px-6 lg:px-8">
+        {children}
+      </div>
+    </body>
   );
 }
