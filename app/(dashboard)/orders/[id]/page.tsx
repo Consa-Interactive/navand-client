@@ -97,12 +97,14 @@ const statusColors = {
   },
 };
 
-export const ACTIVE_ORDER_STATUSES = [
+/*
+export const ACTIVE_ORDER_STATUSES: ReadonlyArray<string> = [
   "CONFIRMED",
   "PURCHASED",
   "RECEIVED_IN_TURKEY",
   "ARRIVED_IN_ERBIL",
-] as const;
+];
+*/
 
 export default function OrderDetailsPage() {
   const params = useParams();

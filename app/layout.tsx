@@ -21,12 +21,6 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "Navand Express",
   },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-  },
-  themeColor: "#f07d00",
 };
 
 export default function RootLayout({
