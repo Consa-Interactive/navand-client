@@ -32,6 +32,7 @@ enum OrderStatus {
   PURCHASED
   REJECTED
   PENDING
+  RECEIVED_IN_TURKEY
   IN_TRANSIT
   DELIVERED_TO_WAREHOUSE
   PREPAID
@@ -61,6 +62,7 @@ model Order {
   title              String?
   size               String?
   color              String?
+  country            Country              @default(TURKEY)
   quantity           Int                  @default(1)
   price              Float                @default(0)
   shippingPrice      Float                @default(0)
@@ -81,6 +83,15 @@ model Order {
   @@index([userId])
   @@index([status])
   @@index([invoiceId])
+}
+
+enum Country {
+  TURKEY
+  USA
+  UK
+  UAE
+  EUROPE
+  OTHER
 }
 
 model OrderStatusHistory {

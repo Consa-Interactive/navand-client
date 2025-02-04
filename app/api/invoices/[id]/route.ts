@@ -1,18 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import * as jwt from "jsonwebtoken";
 
 const prisma = new PrismaClient();
 
 export async function GET(request: NextRequest) {
   try {
+    // Get invoice ID from URL
     const id = request.nextUrl.pathname.split("/").pop();
     const invoiceId = parseInt(id || "");
-    if (isNaN(invoiceId)) {
+
+    // Verify token
+    const authHeader = request.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return NextResponse.json({ error: "No token provided" }, { status: 401 });
+    }
+
+    const token = authHeader.split(" ")[1];
+    if (!process.env.JWT_SECRET) {
       return NextResponse.json(
-        { error: "Invalid invoice ID" },
-        { status: 400 }
+        { error: "JWT secret not configured" },
+        { status: 500 }
       );
     }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET) as {
+        sub: string;
+        role: string;
+      };
+    } catch {
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    }
+
+    if (!decoded?.sub || !["ADMIN", "WORKER"].includes(decoded.role)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
+    // Get invoice with related data
     const invoice = await prisma.invoice.findUnique({
       where: {
         id: invoiceId,

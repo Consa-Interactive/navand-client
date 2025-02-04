@@ -134,7 +134,7 @@ export default function EditOrderModal({
         throw new Error(errorData.error || "Failed to update order");
       }
 
-      setOrderUpdates(true);
+      setOrderUpdates((prev) => prev + 1);
       onClose();
     } catch (err) {
       console.error("Error updating order:", err);
@@ -332,10 +332,14 @@ export default function EditOrderModal({
                 >
                   <option value="PENDING">Pending</option>
                   <option value="PROCESSING">Processing</option>
+                  <option value="CONFIRMED">Confirmed</option>
                   <option value="PURCHASED">Purchased</option>
-                  <option value="SHIPPED">Shipped</option>
+                  <option value="RECEIVED_IN_TURKEY">Received in Turkey</option>
+                  <option value="IN_TRANSIT">In Transit</option>
+                  <option value="ARRIVED_ERBIL">Arrived in Erbil</option>
                   <option value="DELIVERED">Delivered</option>
                   <option value="CANCELLED">Cancelled</option>
+                  <option value="ISSUE">Issue</option>
                 </select>
               </div>
             </div>

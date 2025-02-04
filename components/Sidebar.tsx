@@ -11,6 +11,7 @@ import {
   Megaphone,
   Image,
   DollarSign,
+  ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -22,32 +23,63 @@ interface SidebarProps {
 }
 
 type MenuSubItem = {
-  icon: React.ComponentType<Record<string, unknown>>;
+  icon?: React.ComponentType<Record<string, unknown>>;
   label: string;
   href: string;
 };
 
 type MenuItem = {
   name: string;
-  items: MenuSubItem[];
+  items: (
+    | MenuSubItem
+    | {
+        icon: React.ComponentType<Record<string, unknown>>;
+        label: string;
+        href?: string;
+        subItems?: MenuSubItem[];
+      }
+  )[];
 };
 
 export default function Sidebar({ onMobileClose }: SidebarProps) {
   const pathname = usePathname();
   const { user } = useApp();
   const [isMounted, setIsMounted] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
 
   // Handle mounting to avoid hydration mismatch
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
+  const toggleMenu = (label: string) => {
+    setExpandedMenus((prev) =>
+      prev.includes(label)
+        ? prev.filter((item) => item !== label)
+        : [...prev, label]
+    );
+  };
+
   const menuCategories: MenuItem[] = [
     {
       name: "MAIN",
       items: [
         { icon: Home, label: "Dashboard", href: "/" },
-        { icon: Package, label: "Orders", href: "/orders" },
+        {
+          icon: Package,
+          label: "Orders",
+          subItems: [
+            { label: "All Orders", href: "/orders" },
+            { label: "Active Orders", href: "/orders?status=active" },
+            { label: "Passive Orders", href: "/orders?status=passive" },
+            { label: "Turkey", href: "/orders?country=turkey" },
+            { label: "United States", href: "/orders?country=usa" },
+            { label: "UAE", href: "/orders?country=uae" },
+            { label: "United Kingdom", href: "/orders?country=uk" },
+            { label: "China", href: "/orders?country=china" },
+            { label: "Europe", href: "/orders?country=europe" },
+          ],
+        },
       ],
     },
     ...(user?.role === "ADMIN" || user?.role === "WORKER"
@@ -113,74 +145,131 @@ export default function Sidebar({ onMobileClose }: SidebarProps) {
       </div>
 
       {/* Menu Categories */}
-      <div className="scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent flex-1 space-y-1 overflow-y-auto py-6">
-        {menuCategories.map((category, categoryIndex) => (
-          <div key={categoryIndex} className="mb-6">
-            <h2 className="mb-2 px-6 text-xs font-semibold uppercase tracking-wider text-gray-500">
-              {category.name}
-            </h2>
-            {category.items.map((item, itemIndex) => {
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={itemIndex}
-                  href={item.href}
-                  onClick={() => {
-                    // Close mobile menu when link is clicked
-                    if (onMobileClose) {
-                      onMobileClose();
-                    }
-                  }}
-                  className={`group relative mx-3 flex items-center rounded-lg px-6 py-2 transition-all duration-200
-                    ${
-                      isActive
-                        ? "bg-gray-800 text-white"
-                        : "text-gray-400 hover:bg-gray-800/50 hover:text-white"
-                    }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div
-                      className={`rounded-lg p-1 transition-transform group-hover:scale-110 ${
-                        isActive ? "bg-gray-700" : ""
-                      }`}
-                    >
-                      <item.icon
-                        className={`h-5 w-5 ${isActive ? "text-primary" : ""}`}
-                      />
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-gray-700/30 hover:scrollbar-thumb-gray-700/50">
+          <div className="py-4">
+            {menuCategories.map((category, categoryIndex) => (
+              <div key={categoryIndex} className="mb-4">
+                <h2 className="mb-2 px-6 text-[11px] font-medium uppercase tracking-wider text-gray-500/80">
+                  {category.name}
+                </h2>
+                {category.items.map((item, itemIndex) => {
+                  const isDropdown = "subItems" in item;
+                  const isActive = isDropdown
+                    ? item.subItems?.some(
+                        (subItem) => pathname === subItem.href
+                      )
+                    : pathname === item.href;
+                  const isExpanded = expandedMenus.includes(item.label);
+
+                  return (
+                    <div key={itemIndex}>
+                      {isDropdown ? (
+                        <>
+                          <button
+                            onClick={() => toggleMenu(item.label)}
+                            className={`group relative mx-3 flex w-[calc(100%-24px)] items-center justify-between rounded-xl px-4 py-2 transition-all duration-200
+                              ${
+                                isActive
+                                  ? "bg-gray-800/90 text-white"
+                                  : "text-gray-400 hover:bg-gray-800/40 hover:text-white"
+                              }`}
+                          >
+                            <div className="flex items-center space-x-3">
+                              <div
+                                className={`rounded-xl transition-transform group-hover:scale-105 ${
+                                  isActive ? "text-primary" : ""
+                                }`}
+                              >
+                                <item.icon className={`h-[18px] w-[18px]`} />
+                              </div>
+                              <span className="text-sm font-medium">
+                                {item.label}
+                              </span>
+                            </div>
+                            <ChevronDown
+                              className={`h-4 w-4 transition-transform duration-200 ${
+                                isExpanded ? "rotate-180" : ""
+                              }`}
+                            />
+                          </button>
+                          {isExpanded && (
+                            <div className="mt-1 space-y-1 pl-12 pr-3">
+                              {item.subItems?.map((subItem, subIndex) => {
+                                const isSubItemActive =
+                                  pathname === subItem.href;
+                                return (
+                                  <Link
+                                    key={subIndex}
+                                    href={subItem.href}
+                                    onClick={onMobileClose}
+                                    className={`block rounded-xl px-4 py-2 text-[13px] transition-colors ${
+                                      isSubItemActive
+                                        ? "bg-gray-800/90 text-white"
+                                        : "text-gray-400 hover:bg-gray-800/40 hover:text-white"
+                                    }`}
+                                  >
+                                    {subItem.label}
+                                  </Link>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <Link
+                          href={item.href!}
+                          onClick={onMobileClose}
+                          className={`group relative mx-3 flex items-center rounded-xl px-4 py-2 transition-all duration-200
+                            ${
+                              isActive
+                                ? "bg-gray-800/90 text-white"
+                                : "text-gray-400 hover:bg-gray-800/40 hover:text-white"
+                            }`}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div
+                              className={`rounded-xl transition-transform group-hover:scale-105 ${
+                                isActive ? "text-primary" : ""
+                              }`}
+                            >
+                              {item.icon && (
+                                <item.icon className={`h-[18px] w-[18px]`} />
+                              )}
+                            </div>
+                            <span className="text-sm font-medium">
+                              {item.label}
+                            </span>
+                          </div>
+                          <ChevronRight
+                            className={`absolute right-2 h-4 w-4 transform transition-all duration-200
+                              ${
+                                isActive
+                                  ? "text-primary opacity-100"
+                                  : "-translate-x-2 opacity-0 group-hover:translate-x-0 group-hover:opacity-50"
+                              }`}
+                          />
+                        </Link>
+                      )}
                     </div>
-                    <span className="font-medium">{item.label}</span>
-                  </div>
-
-                  {/* Hover and Active Indicators */}
-                  <ChevronRight
-                    className={`absolute right-2 h-4 w-4 transform transition-all
-                    ${
-                      isActive
-                        ? "text-primary opacity-100"
-                        : "-translate-x-2 opacity-0 group-hover:translate-x-0 group-hover:opacity-50"
-                    }`}
-                  />
-
-                  {isActive && (
-                    <div className="absolute right-0 top-1 h-[calc(100%-8px)] w-1 rounded-l-full bg-primary" />
-                  )}
-                </Link>
-              );
-            })}
+                  );
+                })}
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
       </div>
 
       {/* User Account Section with glass effect */}
-      <div className="mt-auto border-t border-gray-800 bg-gray-900/50 backdrop-blur-sm">
+      <div className="mt-auto border-t border-gray-800/50 bg-gray-900/50 backdrop-blur-sm">
         <div className="mx-3 p-4">
           <div className="flex items-center space-x-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-800 ring-2 ring-gray-700">
-              <User className="h-5 w-5 text-gray-300" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-800/80 ring-2 ring-gray-700/50">
+              <User className="h-[18px] w-[18px] text-gray-300" />
             </div>
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-200">{user?.name}</p>
-              <p className="text-xs text-gray-500">{user?.role}</p>
+              <p className="text-[11px] text-gray-500">{user?.role}</p>
             </div>
           </div>
         </div>

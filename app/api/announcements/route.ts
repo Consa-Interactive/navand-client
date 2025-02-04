@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { AnnouncementCategory, PrismaClient } from "@prisma/client";
 import jwt from "jsonwebtoken";
+import { isAdmin } from "@/lib/utils";
 const prisma = new PrismaClient();
 
 export async function GET(request: Request) {
@@ -47,23 +48,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No token provided" }, { status: 401 });
     }
 
-    const token = authHeader.split(" ")[1];
-    if (!token) {
+    if (isAdmin(authHeader, ["ADMIN"]) === false) {
       return NextResponse.json(
-        { error: "Invalid token format" },
-        { status: 401 }
+        {
+          error: "Unauthorized. Only admins can create announcements.",
+        },
+        { status: 403 }
       );
     }
 
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
-      sub: string;
-      role: string;
-    };
-
-    if (!decoded || !decoded.sub) {
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-    }
+    const decoded = jwt.verify(authHeader, process.env.JWT_SECRET!);
 
     const body = await request.json();
     const { title, content, category, isImportant, expiresAt } = body;

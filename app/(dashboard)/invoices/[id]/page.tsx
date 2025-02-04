@@ -1,19 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import { Dialog } from "@headlessui/react";
 import { useParams } from "next/navigation";
-import {
-  FileText,
-  Printer,
-  Share2,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  Loader2,
-  Package,
-} from "lucide-react";
+import { Printer, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Cookies from "js-cookie";
 
@@ -68,21 +58,73 @@ export default function InvoiceDetailsPage() {
             Authorization: `Bearer ${Cookies.get("token")}`,
           },
         });
+
         if (!response.ok) {
-          throw new Error("Failed to fetch invoice");
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to fetch invoice");
         }
+
         const data = await response.json();
         setInvoice(data);
       } catch (error) {
         console.error("Error fetching invoice:", error);
-        setError("Failed to load invoice");
+        setError(
+          error instanceof Error ? error.message : "Failed to load invoice"
+        );
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchInvoice();
+    if (params.id) {
+      fetchInvoice();
+    }
   }, [params.id]);
+
+  // Add global print styles when component mounts
+  useEffect(() => {
+    const style = document.createElement("style");
+    style.innerHTML = `
+      @media print {
+        @page {
+          margin: 0;
+          size: auto;
+        }
+        body {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        /* Hide browser elements */
+        #__next-build-watcher,
+        #__next-route-announcer,
+        .next-debug,
+        .print-hide,
+        nav,
+        header,
+        .sidebar,
+        .mobile-menu,
+        button[aria-label="Toggle Menu"],
+        [role="navigation"] {
+          display: none !important;
+        }
+        /* Hide URL */
+        @page {
+          margin: 0;
+        }
+        @page :first {
+          margin-top: 0;
+        }
+        /* Reset background colors for print */
+        * {
+          background-color: transparent !important;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
 
   const handlePrint = async () => {
     setIsPrinting(true);
@@ -91,27 +133,6 @@ export default function InvoiceDetailsPage() {
     } finally {
       setIsPrinting(false);
     }
-  };
-
-  const getStatusColor = (status: Invoice["status"]) => {
-    const colors = {
-      PAID: {
-        bg: "bg-green-50 dark:bg-green-900/20",
-        text: "text-green-700 dark:text-green-400",
-        icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
-      },
-      PENDING: {
-        bg: "bg-yellow-50 dark:bg-yellow-900/20",
-        text: "text-yellow-700 dark:text-yellow-400",
-        icon: <Clock className="h-5 w-5 text-yellow-500" />,
-      },
-      OVERDUE: {
-        bg: "bg-red-50 dark:bg-red-900/20",
-        text: "text-red-700 dark:text-red-400",
-        icon: <XCircle className="h-5 w-5 text-red-500" />,
-      },
-    };
-    return colors[status];
   };
 
   if (isLoading) {
@@ -132,196 +153,115 @@ export default function InvoiceDetailsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header - Hidden in Print */}
-        <div className="print:hidden">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+      <div className="container mx-auto px-4 py-4 sm:py-8">
+        {/* Print Button - Hidden in Print */}
+        <div className="print:hidden text-right mb-4">
+          <button
+            onClick={handlePrint}
+            disabled={isPrinting}
+            className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
           >
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-white p-2 shadow-sm dark:bg-gray-800">
-                <FileText className="h-6 w-6 text-orange-500" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  Invoice Details
-                </h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Manage and view invoice information
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                onClick={handlePrint}
-                disabled={isPrinting}
-                className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition-all hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-500/20 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 disabled:opacity-50"
-              >
-                {isPrinting ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Printer className="h-4 w-4" />
-                )}
-                Print
-              </button>
-
-              <button
-                onClick={() => setShowShareDialog(true)}
-                className="inline-flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
-              >
-                <Share2 className="h-4 w-4" />
-                Share
-              </button>
-            </div>
-          </motion.div>
+            {isPrinting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Printer className="h-4 w-4" />
+            )}
+            Print Invoice
+          </button>
         </div>
 
-        {/* Invoice Card - Only this will be printed */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="overflow-hidden rounded-xl bg-white shadow-lg dark:bg-gray-800 print:shadow-none print:m-0 print:p-0 print:rounded-none print:bg-white"
-          style={{ pageBreakAfter: "always" }}
-        >
+        {/* Invoice Card */}
+        <div className="bg-white shadow-sm print:shadow-none">
           {/* Invoice Header */}
-          <div className="border-b border-gray-200 bg-gray-50 p-6 dark:border-gray-700 dark:bg-gray-800/50 print:bg-white print:border-gray-300">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white print:text-black">
-                  Invoice #{invoice.id}
-                </h2>
-                <div className="mt-1 flex flex-col gap-1 text-sm text-gray-600 dark:text-gray-400 print:text-gray-600">
-                  <p>
-                    Issue Date: {new Date(invoice.date).toLocaleDateString()}
-                  </p>
-                  <p>
-                    Due Date: {new Date(invoice.dueDate).toLocaleDateString()}
-                  </p>
+          <div className="p-4 sm:p-8 border-b">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-6 sm:gap-4">
+              {/* Company Logo & Info */}
+              <div className="flex items-start gap-4">
+                <div className="relative h-12 w-12 sm:h-16 sm:w-16">
+                  <Image
+                    src="/logo.png"
+                    alt="Buy Online"
+                    fill
+                    className="object-contain"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <h2 className="font-bold">
+                    {process.env.NEXT_PUBLIC_COMPANY_NAME ?? "Navand Express"}
+                  </h2>
+                  <div className="text-sm space-y-0.5">
+                    <p>{process.env.NEXT_PUBLIC_COMPANY_PHONE ?? ""}</p>
+                    <p>{process.env.NEXT_PUBLIC_COMPANY_CITY ?? ""}</p>
+                    <p>{process.env.NEXT_PUBLIC_COMPANY_ADDRESS ?? ""}</p>
+                  </div>
                 </div>
               </div>
-              <div className="flex flex-col items-center gap-2">
-                <Image src="/logo.png" alt="" width={100} height={100} />
 
-                <div
-                  className={`flex items-center gap-2 rounded-full px-4 py-2 ${
-                    getStatusColor(invoice.status).bg
-                  } print:bg-transparent`}
-                >
-                  <span className="print:hidden">
-                    {getStatusColor(invoice.status).icon}
-                  </span>
-                  <span className="text-sm font-medium print:text-gray-600">
-                    {invoice.status.charAt(0) +
-                      invoice.status.slice(1).toLowerCase()}
-                  </span>
-                </div>
+              {/* Invoice Info */}
+              <div className="text-right space-y-1">
+                <h2 className="font-bold text-sm sm:text-base print:hidden">
+                  Navand Express
+                </h2>
+                <p className="text-red-500 font-medium text-xs sm:text-sm">
+                  +964 750 3513232
+                </p>
+                <p className="text-xs sm:text-sm">Iraq, Erbil</p>
+                <p className="text-xs sm:text-sm">Erbil</p>
+                <p className="mt-2 sm:mt-4 text-xs sm:text-sm print:hidden">
+                  {new Date().toISOString().split("T")[0].replace(/-/g, ".")}
+                </p>
               </div>
             </div>
           </div>
 
-          <div className="p-6 print:p-4">
-            {/* Customer and Company Info */}
-            <div className="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-2 print:gap-4">
-              <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-800/50 print:bg-transparent print:border print:border-gray-200">
-                <h3 className="mb-3 text-sm font-medium text-gray-900 dark:text-white print:text-black">
-                  Bill To:
-                </h3>
-                <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400 print:text-gray-600">
-                  <p className="font-medium text-gray-900 dark:text-white print:text-black">
-                    {invoice.user.name}
-                  </p>
-                  <p>{invoice.user.email}</p>
-                  <p>{invoice.user.phoneNumber}</p>
-                  <p>{invoice.user.address}</p>
-                </div>
-              </div>
-              <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-800/50 print:bg-transparent print:border print:border-gray-200">
-                <h3 className="mb-3 text-sm font-medium text-gray-900 dark:text-white print:text-black">
-                  Payment Details:
-                </h3>
-                <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400 print:text-gray-600">
-                  <p>Payment Method: {invoice.paymentMethod}</p>
-                  <p>
-                    Status:{" "}
-                    {invoice.status.charAt(0) +
-                      invoice.status.slice(1).toLowerCase()}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Invoice Items */}
-            <div className="mb-8 overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 print:divide-gray-300">
-                <thead className="print:bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 print:text-gray-700">
-                      Item
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 print:text-gray-700">
-                      Size
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 print:text-gray-700">
-                      Color
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 print:text-gray-700">
-                      Quantity
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 print:text-gray-700">
-                      Price
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 print:text-gray-700">
-                      Total
-                    </th>
+          {/* Invoice Table */}
+          <div className="p-4 sm:p-8">
+            <div className="overflow-x-auto -mx-4 sm:mx-0">
+              <table className="w-full min-w-[600px]">
+                <thead>
+                  <tr className="border-b text-xs sm:text-sm">
+                    <th className="pb-3 text-left font-medium">ID</th>
+                    <th className="pb-3 text-left font-medium">Title</th>
+                    <th className="pb-3 text-center font-medium">Status</th>
+                    <th className="pb-3 text-center font-medium">Quantity</th>
+                    <th className="pb-3 text-right font-medium">Total</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-700 print:divide-gray-200">
+                <tbody className="text-xs sm:text-sm">
                   {invoice.orders.map((order) => (
-                    <tr key={order.id} className="print:hover:bg-gray-50">
-                      <td className="whitespace-nowrap px-4 py-4">
-                        <div className="flex items-center gap-3">
-                          {order.imageUrl ? (
-                            <div className="relative h-12 w-12 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-900 print:border-gray-300">
+                    <tr key={order.id} className="border-b last:border-b-0">
+                      <td className="py-3 sm:py-4">{order.id}</td>
+                      <td className="py-3 sm:py-4">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          {order.imageUrl && (
+                            <div className="relative h-8 w-8 sm:h-12 sm:w-12 border rounded">
                               <Image
                                 src={order.imageUrl}
-                                alt={order.title || "Product image"}
-                                className="h-full w-full object-cover"
-                                width={48}
-                                height={48}
+                                alt={order.title || ""}
+                                fill
+                                className="object-cover rounded"
                               />
                             </div>
-                          ) : (
-                            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 print:bg-gray-50 print:border print:border-gray-200">
-                              <Package className="h-6 w-6 text-gray-400" />
-                            </div>
                           )}
-                          <span className="text-sm font-medium text-gray-900 dark:text-white print:text-gray-900">
+                          <span className="text-xs sm:text-sm line-clamp-2">
                             {order.title}
                           </span>
                         </div>
                       </td>
-                      <td className="whitespace-nowrap px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 print:text-gray-600">
-                        {order.size}
+                      <td className="py-3 sm:py-4 text-center">
+                        <span className="inline-flex px-2 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-medium bg-green-100 text-green-800">
+                          {invoice.status}
+                        </span>
                       </td>
-                      <td className="whitespace-nowrap px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 print:text-gray-600">
-                        {order.color}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-4 text-center text-sm text-gray-900 dark:text-white print:text-gray-900">
+                      <td className="py-3 sm:py-4 text-center">
                         {order.quantity}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-4 text-right text-sm text-gray-900 dark:text-white print:text-gray-900">
-                        ${order.price.toFixed(2)}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-4 text-right text-sm font-medium text-gray-900 dark:text-white print:text-gray-900">
+                      <td className="py-3 sm:py-4 text-right">
                         $
                         {(
                           order.price * order.quantity +
-                          order.shippingPrice * order.quantity +
-                          order.localShippingPrice * order.quantity
+                          (order.shippingPrice + order.localShippingPrice) *
+                            order.quantity
                         ).toFixed(2)}
                       </td>
                     </tr>
@@ -330,33 +270,16 @@ export default function InvoiceDetailsPage() {
               </table>
             </div>
 
-            {/* Invoice Summary */}
-            <div className="flex justify-end">
-              <div className="w-full max-w-md rounded-lg bg-gray-50 p-6 dark:bg-gray-800/50 print:bg-transparent print:border print:border-gray-200">
-                <div className="flex justify-between">
-                  <span className="text-base font-medium text-gray-900 dark:text-white print:text-gray-900">
-                    Total
-                  </span>
-                  <span className="text-base font-bold text-gray-900 dark:text-white print:text-gray-900">
-                    ${invoice.total.toFixed(2)}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Notes */}
-            {invoice.notes && (
-              <div className="mt-8 rounded-lg bg-gray-50 p-4 dark:bg-gray-800/50 print:bg-transparent print:border print:border-gray-200">
-                <h3 className="mb-2 text-sm font-medium text-gray-900 dark:text-white print:text-gray-900">
-                  Notes:
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 print:text-gray-600">
-                  {invoice.notes}
+            {/* Total */}
+            <div className="mt-4 sm:mt-6 flex justify-end">
+              <div className="text-right">
+                <p className="text-xs sm:text-sm text-red-500 font-bold">
+                  Total: ${invoice.total.toFixed(2)}
                 </p>
               </div>
-            )}
+            </div>
           </div>
-        </motion.div>
+        </div>
       </div>
 
       {/* Share Dialog - Hidden in Print */}

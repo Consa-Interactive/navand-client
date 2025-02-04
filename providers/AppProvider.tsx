@@ -6,38 +6,54 @@ import {
   useEffect,
   useState,
   ReactNode,
+  useCallback,
 } from "react";
-import { User, Order } from "@prisma/client";
+import { User } from "@prisma/client";
 import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
+import { Order } from "@prisma/client";
+export type OrderType = Order;
 
 interface AppContextType {
   user: User | null;
-  orders: Order[];
+  orders: OrderType[];
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (token: string) => void;
   logout: () => void;
   refreshUser: () => Promise<void>;
-  orderUpdates: boolean;
-  setOrderUpdates: (value: boolean) => void;
+  orderUpdates: number;
+  setOrders: (orders: OrderType[]) => void;
+  updateOrder: (updatedOrder: OrderType) => void;
+  triggerOrderUpdate: () => Promise<void>;
+  refreshOrders: () => Promise<void>;
+  setOrderUpdates: React.Dispatch<React.SetStateAction<number>>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<OrderType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [orderUpdates, setOrderUpdates] = useState(false);
+  const [orderUpdates, setOrderUpdates] = useState(0);
   const router = useRouter();
 
-  useEffect(() => {
-    if (orderUpdates) {
-      // Reset after triggering refresh
-      setTimeout(() => setOrderUpdates(false), 100);
-    }
-  }, [orderUpdates]);
+  const triggerOrderUpdate = useCallback(() => {
+    return Promise.resolve(setOrderUpdates((prev) => prev + 1));
+  }, []);
+
+  const updateOrder = useCallback((updatedOrder: OrderType) => {
+    setOrders((prevOrders) => {
+      const orderIndex = prevOrders.findIndex((o) => o.id === updatedOrder.id);
+      if (orderIndex === -1) {
+        return [...prevOrders, updatedOrder];
+      }
+      const newOrders = [...prevOrders];
+      newOrders[orderIndex] = updatedOrder;
+      return newOrders;
+    });
+  }, []);
 
   const fetchUser = async (token: string) => {
     try {
@@ -105,6 +121,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const refreshOrders = async () => {
+    if (user) {
+      await fetchOrders();
+    }
+  };
+
   // Fetch orders when user changes or orderUpdates is triggered
   useEffect(() => {
     if (user) {
@@ -126,6 +148,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     logout,
     refreshUser,
     orderUpdates,
+    setOrders,
+    updateOrder,
+    triggerOrderUpdate,
+    refreshOrders,
     setOrderUpdates,
   };
 

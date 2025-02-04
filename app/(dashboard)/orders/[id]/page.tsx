@@ -9,7 +9,6 @@ import {
   Clock,
   CheckCircle2,
   ShoppingCart,
-  Truck,
   Box,
   XCircle,
   CheckCheck,
@@ -43,6 +42,7 @@ interface Order {
       name: string;
     };
   }[];
+  prepaid: boolean;
 }
 
 const statusColors = {
@@ -60,6 +60,13 @@ const statusColors = {
     ring: "ring-blue-500",
     icon: ShoppingCart,
   },
+  CONFIRMED: {
+    bg: "bg-emerald-50 dark:bg-emerald-900/20",
+    text: "text-emerald-700 dark:text-emerald-500",
+    dot: "bg-emerald-500",
+    ring: "ring-emerald-500",
+    icon: CheckCheck,
+  },
   PURCHASED: {
     bg: "bg-pink-50 dark:bg-pink-900/20",
     text: "text-pink-700 dark:text-pink-500",
@@ -67,18 +74,18 @@ const statusColors = {
     ring: "ring-pink-500",
     icon: CheckCircle2,
   },
-  SHIPPED: {
+  RECEIVED_IN_TURKEY: {
+    bg: "bg-indigo-50 dark:bg-indigo-900/20",
+    text: "text-indigo-700 dark:text-indigo-500",
+    dot: "bg-indigo-500",
+    ring: "ring-indigo-500",
+    icon: Package,
+  },
+  ARRIVED_IN_ERBIL: {
     bg: "bg-purple-50 dark:bg-purple-900/20",
     text: "text-purple-700 dark:text-purple-500",
     dot: "bg-purple-500",
     ring: "ring-purple-500",
-    icon: Truck,
-  },
-  DELIVERED: {
-    bg: "bg-green-50 dark:bg-green-900/20",
-    text: "text-green-700 dark:text-green-500",
-    dot: "bg-green-500",
-    ring: "ring-green-500",
     icon: Box,
   },
   CANCELLED: {
@@ -88,14 +95,14 @@ const statusColors = {
     ring: "ring-red-500",
     icon: XCircle,
   },
-  CONFIRMED: {
-    bg: "bg-emerald-50 dark:bg-emerald-900/20",
-    text: "text-emerald-700 dark:text-emerald-500",
-    dot: "bg-emerald-500",
-    ring: "ring-emerald-500",
-    icon: CheckCheck,
-  },
 };
+
+export const ACTIVE_ORDER_STATUSES = [
+  "CONFIRMED",
+  "PURCHASED",
+  "RECEIVED_IN_TURKEY",
+  "ARRIVED_IN_ERBIL",
+] as const;
 
 export default function OrderDetailsPage() {
   const params = useParams();
@@ -158,23 +165,51 @@ export default function OrderDetailsPage() {
             Created At: {new Date(order.createdAt).toLocaleString()}
           </p>
         </div>
-
-        {/* TODO: Make buttons functional */}
-        {/* <div className="flex items-center gap-2">
-          <button className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">
-            <Printer className="h-4 w-4" />
-            Print Label
-          </button>
-          <button className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-orange-600/90">
-            <Edit className="h-4 w-4" />
-            Edit Order
-          </button>
-        </div> */}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Order Details */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Product Image */}
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+            <div className="border-b border-gray-200 bg-gray-50/50 px-6 py-4 dark:border-gray-700 dark:bg-gray-800/50">
+              <div className="flex items-center justify-between">
+                <h2 className="font-medium text-gray-900 dark:text-white">
+                  Product Image
+                </h2>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`inline-flex items-center rounded-xl px-3 py-1 text-sm font-medium ${
+                      order.prepaid
+                        ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-500"
+                        : "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-500"
+                    }`}
+                  >
+                    {order.prepaid ? "Prepaid" : "Unpaid"}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-center p-6">
+              <div className="relative w-full max-w-[400px] aspect-[4/3] overflow-hidden rounded-xl border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50">
+                {order.imageUrl ? (
+                  <Image
+                    src={order.imageUrl}
+                    alt={order.title}
+                    width={400}
+                    height={300}
+                    className="object-contain w-full h-full"
+                    priority
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <Package className="h-16 w-16 text-gray-400" />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Product Info */}
           <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
             <div className="border-b border-gray-200 bg-gray-50/50 px-6 py-4 dark:border-gray-700 dark:bg-gray-800/50">
@@ -183,95 +218,127 @@ export default function OrderDetailsPage() {
               </h2>
             </div>
             <div className="p-6">
-              <div className="flex items-start gap-4">
-                {order.imageUrl ? (
-                  <div className="relative h-24 w-24 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
-                    <Image
-                      src={order.imageUrl}
-                      alt={order.title}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                ) : (
-                  <div className="flex h-24 w-24 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800">
-                    <Package className="h-8 w-8 text-gray-400" />
-                  </div>
-                )}
-                <div className="flex-1">
-                  <h3 className="font-medium text-gray-900 dark:text-white">
-                    {order.title}
-                  </h3>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {order.size && (
-                      <span className="inline-flex items-center rounded-xl bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-200">
-                        Size: {order.size}
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+                  <div className="flex-1 w-full">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                      {order.title}
+                    </h3>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {order.size && (
+                        <span className="inline-flex items-center rounded-xl bg-gray-100 px-3 py-1 text-sm font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                          Size: {order.size}
+                        </span>
+                      )}
+                      {order.color && (
+                        <span className="inline-flex items-center rounded-xl bg-gray-100 px-3 py-1 text-sm font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                          Color: {order.color}
+                        </span>
+                      )}
+                      <span className="inline-flex items-center rounded-xl bg-gray-100 px-3 py-1 text-sm font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                        Quantity: {order.quantity}
                       </span>
-                    )}
-                    {order.color && (
-                      <span className="inline-flex items-center rounded-xl bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-200">
-                        Color: {order.color}
-                      </span>
-                    )}
-                    <span className="inline-flex items-center rounded-xl bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-200">
-                      Quantity: {order.quantity}
-                    </span>
+                    </div>
                   </div>
-                  <div className="mt-4 flex items-center gap-2">
-                    <a
-                      href={order.productLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-                    >
-                      <Eye className="h-4 w-4" />
-                      View Product
-                    </a>
+                  <div className="w-full sm:w-auto">
+                    <p className="inline-flex items-center rounded-xl bg-orange-400 px-4 py-2 text-base font-medium text-white">
+                      $
+                      {(
+                        (order.price +
+                          order.localShippingPrice +
+                          order.shippingPrice) *
+                        order.quantity
+                      ).toFixed(2)}
+                    </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-lg font-medium text-gray-900 dark:text-white">
-                    ${order.price.toFixed(2)}
-                  </p>
-                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Per Unit
-                  </p>
+
+                <div className="flex items-center gap-4">
+                  <a
+                    href={order.productLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-gray-100 px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                  >
+                    <Eye className="h-4 w-4" />
+                    View Product
+                  </a>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Price Breakdown */}
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-            <div className="border-b border-gray-200 bg-gray-50/50 px-6 py-4 dark:border-gray-700 dark:bg-gray-800/50">
-              <h2 className="font-medium text-gray-900 dark:text-white">
-                Price Breakdown
-              </h2>
-            </div>
-            <div className="p-6">
-              <div className="space-y-3">
-                <div className="border-t border-gray-200 pt-3 dark:border-gray-700">
-                  <div className="flex justify-between">
-                    <span className="font-medium text-gray-900 dark:text-white">
-                      Total
-                    </span>
-                    <span className="font-medium text-gray-900 dark:text-white">
-                      $
-                      {(
-                        order.price * order.quantity +
-                        order.shippingPrice * order.quantity +
-                        order.localShippingPrice * order.quantity
-                      ).toFixed(2)}
-                    </span>
-                  </div>
-                </div>
+          {/* Order Notes */}
+          {order.notes && (
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+              <div className="border-b border-gray-200 bg-gray-50/50 px-6 py-4 dark:border-gray-700 dark:bg-gray-800/50">
+                <h2 className="font-medium text-gray-900 dark:text-white">
+                  Order Notes
+                </h2>
+              </div>
+              <div className="p-6">
+                <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">
+                  {order.notes}
+                </p>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Customer Info & Timeline */}
         <div className="space-y-6">
+          {/* Status Timeline */}
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+            <div className="border-b border-gray-200 bg-gray-50/50 px-6 py-4 dark:border-gray-700 dark:bg-gray-800/50">
+              <h2 className="font-medium text-gray-900 dark:text-white">
+                Order Timeline
+              </h2>
+            </div>
+            <div className="p-6">
+              <div className="relative max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
+                <div className="absolute left-4 top-0 h-full w-0.5 bg-gray-200 dark:bg-gray-700"></div>
+                <div className="space-y-8 pr-4">
+                  {order.statusHistory?.map((history, index) => {
+                    const StatusIcon =
+                      statusColors[history.status as keyof typeof statusColors]
+                        ?.icon || Package;
+                    return (
+                      <div key={index} className="relative flex gap-4">
+                        <div
+                          className={`absolute -left-2 flex h-12 w-12 items-center justify-center rounded-full ${
+                            statusColors[
+                              history.status as keyof typeof statusColors
+                            ]?.bg || "bg-gray-100"
+                          } ring-4 ring-white dark:ring-gray-800`}
+                        >
+                          <StatusIcon
+                            className={`h-5 w-5 ${
+                              statusColors[
+                                history.status as keyof typeof statusColors
+                              ]?.text || "text-gray-500"
+                            }`}
+                          />
+                        </div>
+                        <div className="flex-1 pt-1.5 pl-12">
+                          <p className="font-medium text-gray-900 dark:text-white">
+                            {history.status}
+                          </p>
+                          <div className="mt-1 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                            <span>
+                              {new Date(history.createdAt).toLocaleString()}
+                            </span>
+                            <span>•</span>
+                            <span>by {history.user.name}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Customer Info */}
           <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
             <div className="border-b border-gray-200 bg-gray-50/50 px-6 py-4 dark:border-gray-700 dark:bg-gray-800/50">
@@ -297,55 +364,6 @@ export default function OrderDetailsPage() {
                     {order.user.phoneNumber}
                   </p>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Status Timeline */}
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-            <div className="border-b border-gray-200 bg-gray-50/50 px-6 py-4 dark:border-gray-700 dark:bg-gray-800/50">
-              <h2 className="font-medium text-gray-900 dark:text-white">
-                Status Timeline
-              </h2>
-            </div>
-            <div className="p-6">
-              <div className="relative space-y-6 before:absolute before:inset-0 before:ml-5 before:h-full before:w-0.5 before:-translate-x-px before:bg-gray-200 dark:before:bg-gray-700">
-                {order.statusHistory?.map((status, index) => {
-                  const colors =
-                    statusColors[status.status as keyof typeof statusColors] ||
-                    statusColors.PENDING;
-                  const StatusIcon = colors.icon;
-                  return (
-                    <div
-                      key={index}
-                      className="relative flex items-center gap-4"
-                    >
-                      <div
-                        className={`absolute left-0 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white ring-2 ${colors.ring} dark:bg-gray-800`}
-                      >
-                        <StatusIcon className={`h-5 w-5 ${colors.text}`} />
-                      </div>
-                      <div
-                        className={`ml-12 rounded-xl ${colors.bg} px-4 py-3`}
-                      >
-                        <h3 className={`font-medium ${colors.text}`}>
-                          {status.status}
-                        </h3>
-                        <div className="mt-1 flex items-center gap-2 text-sm">
-                          <span className="text-gray-600 dark:text-gray-400">
-                            By {status.user.name}
-                          </span>
-                          <span className="text-gray-300 dark:text-gray-600">
-                            •
-                          </span>
-                          <span className="text-gray-600 dark:text-gray-400">
-                            {new Date(status.createdAt).toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
               </div>
             </div>
           </div>

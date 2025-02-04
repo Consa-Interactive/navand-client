@@ -5,21 +5,20 @@ import { useState } from "react";
 import { X, CheckCircle, XCircle } from "lucide-react";
 import Cookies from "js-cookie";
 import { Order } from "@prisma/client";
-import { useApp } from "@/providers/AppProvider";
 
 interface OrderActionModalProps {
   isOpen: boolean;
   onClose: () => void;
   order: Order;
-  onOrderUpdated: () => Promise<void>;
+  onOrderUpdated: (updatedOrder: Order) => Promise<void>;
 }
 
 export default function OrderActionModal({
   isOpen,
   onClose,
   order,
+  onOrderUpdated,
 }: OrderActionModalProps) {
-  const { setOrderUpdates } = useApp();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -46,7 +45,8 @@ export default function OrderActionModal({
         throw new Error(errorData.error || "Failed to update order");
       }
 
-      setOrderUpdates(true);
+      const updatedOrder = await response.json();
+      await onOrderUpdated(updatedOrder);
       onClose();
     } catch (err) {
       console.error("Error updating order:", err);

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { Order, PrismaClient } from "@prisma/client";
 import jwt from "jsonwebtoken";
+import { sendWhatsAppMessage } from "@/lib/services/whatsapp";
 
 const prisma = new PrismaClient();
 
@@ -144,6 +145,16 @@ export async function PUT(request: NextRequest) {
           userId: parseInt(decoded.sub),
         },
       });
+
+      // Send WhatsApp message if status has changed
+      if (body.status) {
+        try {
+          await sendWhatsAppMessage(orderId);
+        } catch (error) {
+          console.error("Failed to send WhatsApp message:", error);
+          // Continue with the response even if WhatsApp message fails
+        }
+      }
     }
 
     // If no valid update data

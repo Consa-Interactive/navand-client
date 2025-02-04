@@ -23,6 +23,7 @@ import {
   Phone,
   MapPin,
   Plus,
+  MoreVertical,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import Image from "next/image";
@@ -276,6 +277,77 @@ export default function UsersPage() {
     getPaginationRowModel: getPaginationRowModel(),
   });
 
+  // Mobile card view component
+  const UserCard = ({ user }: { user: User }) => {
+    const location = [user.address, user.city, user.country]
+      .filter(Boolean)
+      .join(", ");
+
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 relative">
+        <div className="flex items-start justify-between">
+          <div className="flex items-start gap-3">
+            <div className="relative h-12 w-12 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+              {user.imageUrl ? (
+                <Image
+                  src={user.imageUrl}
+                  alt={user.name}
+                  fill
+                  className="object-cover"
+                />
+              ) : (
+                <span className="text-lg font-medium text-gray-600 dark:text-gray-300">
+                  {user.name.charAt(0)}
+                </span>
+              )}
+            </div>
+            <div>
+              <h3 className="font-medium text-gray-900 dark:text-white">
+                {user.name}
+              </h3>
+              <div className="mt-1">
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${
+                    roleColors[user.role].bg
+                  } ${roleColors[user.role].text}`}
+                >
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      roleColors[user.role].dot
+                    }`}
+                  />
+                  {user.role}
+                </span>
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => setSelectedUser(user)}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          >
+            <MoreVertical className="h-5 w-5 text-gray-500" />
+          </button>
+        </div>
+
+        <div className="mt-4 space-y-2">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+            <Phone className="h-4 w-4" />
+            {user.phoneNumber}
+          </div>
+          {location && (
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+              <MapPin className="h-4 w-4" />
+              {location}
+            </div>
+          )}
+          <div className="text-xs text-gray-500">
+            Joined {new Date(user.createdAt).toLocaleDateString()}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="space-y-4 p-4 md:p-6">
@@ -407,142 +479,152 @@ export default function UsersPage() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <th
-                      key={header.id}
-                      scope="col"
-                      className="bg-gray-50 px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:bg-gray-900/50 dark:text-gray-400"
-                    >
-                      {header.isPlaceholder ? null : (
-                        <div
-                          className="inline-flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200 cursor-pointer"
-                          onClick={header.column.getToggleSortingHandler()}
-                        >
-                          {flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                          <ArrowUpDown className="h-4 w-4 opacity-50" />
-                        </div>
-                      )}
-                    </th>
-                  ))}
-                </tr>
-              ))}
-            </thead>
-            <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
-              {table.getRowModel().rows.map((row) => (
-                <tr
-                  key={row.id}
-                  className="group transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="whitespace-nowrap px-6 py-4">
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {/* Mobile View */}
+      <div className="grid grid-cols-1 gap-4 lg:hidden">
+        {table.getRowModel().rows.map((row) => (
+          <UserCard key={row.original.id} user={row.original} />
+        ))}
+      </div>
 
-        {/* Pagination */}
-        <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800 sm:px-6">
-          <div className="flex flex-1 items-center justify-between sm:hidden">
-            <button
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
-            >
-              Previous
-            </button>
-            <button
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
-            >
-              Next
-            </button>
+      {/* Desktop View */}
+      <div className="hidden lg:block">
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <tr key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => (
+                      <th
+                        key={header.id}
+                        scope="col"
+                        className="bg-gray-50 px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:bg-gray-900/50 dark:text-gray-400"
+                      >
+                        {header.isPlaceholder ? null : (
+                          <div
+                            className="inline-flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200 cursor-pointer"
+                            onClick={header.column.getToggleSortingHandler()}
+                          >
+                            {flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                            <ArrowUpDown className="h-4 w-4 opacity-50" />
+                          </div>
+                        )}
+                      </th>
+                    ))}
+                  </tr>
+                ))}
+              </thead>
+              <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
+                {table.getRowModel().rows.map((row) => (
+                  <tr
+                    key={row.id}
+                    className="group transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id} className="whitespace-nowrap px-6 py-4">
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-            <div className="flex items-baseline gap-4">
-              <span className="text-sm text-gray-700 dark:text-gray-200">
-                Showing{" "}
-                <span className="font-medium">
-                  {table.getState().pagination.pageIndex * 25 + 1}
-                </span>{" "}
-                to{" "}
-                <span className="font-medium">
-                  {Math.min(
-                    (table.getState().pagination.pageIndex + 1) * 25,
-                    table.getFilteredRowModel().rows.length
-                  )}
-                </span>{" "}
-                of{" "}
-                <span className="font-medium">
-                  {table.getFilteredRowModel().rows.length}
-                </span>{" "}
-                results
-              </span>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-700 dark:text-gray-200">
-                  Show
-                </span>
-                <select
-                  value={25}
-                  onChange={(e) => table.setPageSize(Number(e.target.value))}
-                  className="block w-full rounded-xl border border-gray-300 bg-white p-2 text-sm text-gray-900 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                >
-                  {[25, 50, 75, 100].map((size) => (
-                    <option key={size} value={size}>
-                      {size}
-                    </option>
-                  ))}
-                </select>
-                <span className="text-sm text-gray-700 dark:text-gray-200">
-                  entries
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => table.setPageIndex(0)}
-                disabled={!table.getCanPreviousPage()}
-                className="relative inline-flex items-center rounded-xl border border-gray-300 bg-white p-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400"
-              >
-                <ChevronsLeft className="h-5 w-5" />
-              </button>
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800 sm:px-6">
+            <div className="flex flex-1 items-center justify-between sm:hidden">
               <button
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
-                className="relative inline-flex items-center rounded-xl border border-gray-300 bg-white p-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
               >
-                <ChevronLeft className="h-5 w-5" />
+                Previous
               </button>
               <button
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
-                className="relative inline-flex items-center rounded-xl border border-gray-300 bg-white p-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
               >
-                <ChevronRight className="h-5 w-5" />
+                Next
               </button>
-              <button
-                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                disabled={!table.getCanNextPage()}
-                className="relative inline-flex items-center rounded-xl border border-gray-300 bg-white p-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400"
-              >
-                <ChevronsRight className="h-5 w-5" />
-              </button>
+            </div>
+            <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+              <div className="flex items-baseline gap-4">
+                <span className="text-sm text-gray-700 dark:text-gray-200">
+                  Showing{" "}
+                  <span className="font-medium">
+                    {table.getState().pagination.pageIndex * 25 + 1}
+                  </span>{" "}
+                  to{" "}
+                  <span className="font-medium">
+                    {Math.min(
+                      (table.getState().pagination.pageIndex + 1) * 25,
+                      table.getFilteredRowModel().rows.length
+                    )}
+                  </span>{" "}
+                  of{" "}
+                  <span className="font-medium">
+                    {table.getFilteredRowModel().rows.length}
+                  </span>{" "}
+                  results
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-700 dark:text-gray-200">
+                    Show
+                  </span>
+                  <select
+                    value={25}
+                    onChange={(e) => table.setPageSize(Number(e.target.value))}
+                    className="block w-full rounded-xl border border-gray-300 bg-white p-2 text-sm text-gray-900 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                  >
+                    {[25, 50, 75, 100].map((size) => (
+                      <option key={size} value={size}>
+                        {size}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="text-sm text-gray-700 dark:text-gray-200">
+                    entries
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => table.setPageIndex(0)}
+                  disabled={!table.getCanPreviousPage()}
+                  className="relative inline-flex items-center rounded-xl border border-gray-300 bg-white p-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                >
+                  <ChevronsLeft className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                  className="relative inline-flex items-center rounded-xl border border-gray-300 bg-white p-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                  className="relative inline-flex items-center rounded-xl border border-gray-300 bg-white p-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                  disabled={!table.getCanNextPage()}
+                  className="relative inline-flex items-center rounded-xl border border-gray-300 bg-white p-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                >
+                  <ChevronsRight className="h-5 w-5" />
+                </button>
+              </div>
             </div>
           </div>
         </div>

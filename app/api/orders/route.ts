@@ -116,6 +116,14 @@ export async function POST(request: Request) {
         user: true,
       },
     });
+    await prisma.orderStatusHistory.create({
+      data: {
+        status: "PENDING",
+        orderId: order.id,
+        userId: Number(decoded.sub),
+        notes: "Order created",
+      },
+    });
 
     return NextResponse.json(order);
   } catch (error) {

@@ -47,12 +47,14 @@ export default function AddOrderModal({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [formData, setFormData] = useState({
     productLink: "",
+    title: "",
     size: "",
     color: "",
     quantity: 1,
     notes: "",
     customer: "",
   });
+  const [isScrapingLoading, setIsScrapingLoading] = useState(false);
 
   useEffect(() => {
     if (isAdminOrWorker && searchTerm) {
@@ -82,6 +84,42 @@ export default function AddOrderModal({
       setIsDropdownOpen(false);
     }
   }, [searchTerm, isAdminOrWorker]);
+
+  useEffect(() => {
+    if (!formData.productLink) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        setIsScrapingLoading(true);
+        const response = await fetch("/api/scraper", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ url: formData.productLink }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.title) {
+            setFormData((prev) => ({
+              ...prev,
+              title: data.title,
+            }));
+          }
+          if (data.images && data.images.length > 0) {
+            setUploadedImage(data.images[0]);
+          }
+        }
+      } catch (error) {
+        console.error("Error scraping product:", error);
+      } finally {
+        setIsScrapingLoading(false);
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [formData.productLink]);
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -200,6 +238,7 @@ export default function AddOrderModal({
         },
         body: JSON.stringify({
           productLink: formData.productLink,
+          title: formData.title || "",
           size: formData.size || "",
           color: formData.color || "",
           quantity: Number(formData.quantity) || 1,
@@ -327,11 +366,18 @@ export default function AddOrderModal({
                     error
                       ? "border-red-500"
                       : "border-gray-200 dark:border-gray-600"
-                  } focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200`}
+                  } focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200 ${
+                    isScrapingLoading ? "pr-10" : ""
+                  }`}
                   placeholder="https://example.com/product"
                   required
                 />
                 <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                {isScrapingLoading && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
+                  </div>
+                )}
               </div>
               {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
             </div>

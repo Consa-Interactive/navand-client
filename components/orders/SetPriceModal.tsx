@@ -129,7 +129,7 @@ export default function SetPriceModal({
       onClose();
 
       // Trigger refresh
-      setOrderUpdates(true);
+      setOrderUpdates((prev) => prev + 1);
     } catch (err) {
       console.error("Error updating order:", err);
       setError(err instanceof Error ? err.message : "Failed to update order");
