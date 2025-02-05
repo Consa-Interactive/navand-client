@@ -12,6 +12,7 @@ import {
   Image,
   DollarSign,
   ChevronDown,
+  Scan,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -46,6 +47,7 @@ export default function Sidebar({ onMobileClose }: SidebarProps) {
   const { user } = useApp();
   const [isMounted, setIsMounted] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
+  const isAdminOrWorker = user?.role === "ADMIN" || user?.role === "WORKER";
 
   // Handle mounting to avoid hydration mismatch
   useEffect(() => {
@@ -65,24 +67,26 @@ export default function Sidebar({ onMobileClose }: SidebarProps) {
       name: "MAIN",
       items: [
         { icon: Home, label: "Dashboard", href: "/" },
-        {
-          icon: Package,
-          label: "Orders",
-          subItems: [
-            { label: "All Orders", href: "/orders" },
-            { label: "Active Orders", href: "/orders?status=active" },
-            { label: "Passive Orders", href: "/orders?status=passive" },
-            { label: "Turkey", href: "/orders?country=turkey" },
-            { label: "United States", href: "/orders?country=usa" },
-            { label: "UAE", href: "/orders?country=uae" },
-            { label: "United Kingdom", href: "/orders?country=uk" },
-            { label: "China", href: "/orders?country=china" },
-            { label: "Europe", href: "/orders?country=europe" },
-          ],
-        },
-      ],
+        isAdminOrWorker
+          ? {
+              icon: Package,
+              label: "Orders",
+              subItems: [
+                { label: "All Orders", href: "/orders" },
+                { label: "Active Orders", href: "/orders?status=active" },
+                { label: "Passive Orders", href: "/orders?status=passive" },
+                { label: "Turkey", href: "/orders?country=turkey" },
+                { label: "United States", href: "/orders?country=usa" },
+                { label: "UAE", href: "/orders?country=uae" },
+                { label: "United Kingdom", href: "/orders?country=uk" },
+                { label: "China", href: "/orders?country=china" },
+                { label: "Europe", href: "/orders?country=europe" },
+              ],
+            }
+          : { icon: Package, label: "My Orders", href: "/orders" },
+      ].filter(Boolean),
     },
-    ...(user?.role === "ADMIN" || user?.role === "WORKER"
+    ...(isAdminOrWorker
       ? [
           {
             name: "MANAGEMENT",
@@ -107,6 +111,11 @@ export default function Sidebar({ onMobileClose }: SidebarProps) {
                 icon: DollarSign,
                 label: "Exchange Rates",
                 href: "/exchange-rates",
+              },
+              {
+                icon: Scan,
+                label: "Scan",
+                href: "/scan",
               },
             ],
           },

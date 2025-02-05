@@ -34,6 +34,7 @@ export default function EditOrderModal({
       productLink: order.productLink || "",
       imageUrl: order.imageUrl || "",
       notes: order.notes || "",
+      orderNumber: order.orderNumber || "",
     }),
     [order]
   );
@@ -107,18 +108,7 @@ export default function EditOrderModal({
 
     try {
       const token = Cookies.get("token");
-      const updateData = {
-        title: formData.title,
-        size: formData.size,
-        color: formData.color,
-        quantity: Number(formData.quantity) || 1,
-        price: Number(formData.price) || 0,
-        shippingPrice: Number(formData.shippingPrice) || 0,
-        status: formData.status,
-        productLink: formData.productLink,
-        imageUrl: formData.imageUrl,
-        notes: formData.notes,
-      };
+      if (!token) throw new Error("No authentication token found");
 
       const response = await fetch(`/api/orders/${order.id}`, {
         method: "PUT",
@@ -126,7 +116,7 @@ export default function EditOrderModal({
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(updateData),
+        body: JSON.stringify(formData),
       });
 
       if (!response.ok) {
@@ -134,6 +124,7 @@ export default function EditOrderModal({
         throw new Error(errorData.error || "Failed to update order");
       }
 
+      await response.json();
       setOrderUpdates((prev) => prev + 1);
       onClose();
     } catch (err) {
@@ -341,6 +332,19 @@ export default function EditOrderModal({
                   <option value="CANCELLED">Cancelled</option>
                   <option value="ISSUE">Issue</option>
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                  Order Number
+                </label>
+                <input
+                  type="text"
+                  name="orderNumber"
+                  value={formData.orderNumber}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full rounded-xl border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400"
+                  placeholder="Enter order number"
+                />
               </div>
             </div>
 

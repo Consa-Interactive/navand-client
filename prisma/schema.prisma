@@ -68,6 +68,7 @@ model Order {
   shippingPrice      Float                @default(0)
   localShippingPrice Float                @default(0)
   status             OrderStatus          @default(PENDING)
+  orderNumber        String?              
   productLink        String?
   imageUrl           String?
   notes              String?

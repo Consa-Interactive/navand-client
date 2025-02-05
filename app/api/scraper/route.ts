@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import axios from "axios";
 import * as cheerio from "cheerio";
 
+// Helper function to validate image URL format
+function isValidImageFormat(url: string): boolean {
+  const validExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+  const lowercaseUrl = url.toLowerCase();
+  return validExtensions.some(ext => lowercaseUrl.endsWith(ext));
+}
+
 // Helper function to extract product information
 async function scrapeProduct(url: string) {
   try {
@@ -16,18 +23,22 @@ async function scrapeProduct(url: string) {
 
     // Common selectors for product titles
     const titleSelectors = [
-      "h1",
+      'meta[property="og:title"]',
+      'meta[name="title"]',
+      'h1',
       '[data-testid="product-title"]',
-      ".product-title",
-      ".product-name",
+      '.product-title',
+      '.product-name',
       '[itemprop="name"]',
-      "#product-name",
-      ".title",
+      '#product-name',
+      '.title',
     ];
 
     // Try to find title using common selectors
     for (const selector of titleSelectors) {
-      const title = $(selector).first().text().trim();
+      const title = selector.startsWith('meta') 
+        ? $(selector).attr('content')
+        : $(selector).first().text().trim();
       if (title) {
         productData.title = title;
         break;
@@ -36,28 +47,48 @@ async function scrapeProduct(url: string) {
 
     // Common selectors for product images
     const imageSelectors = [
+      // OpenGraph and meta tags
+      'meta[property="og:image"]',
+      'meta[name="twitter:image"]',
+      'meta[property="product:image"]',
+      
+      // Common product image selectors
+      '.product-image img',
+      '.product-gallery img',
+      '.product__image img',
+      '#product-image',
+      '[data-product-image]',
+      '[data-product-photo]',
+      
+      // Fallback to any image that might be a product image
       'img[src*="product"]',
       'img[src*="products"]',
-      '[data-testid="product-image"]',
-      ".product-image img",
-      '[itemprop="image"]',
-      "#product-image",
-      ".gallery img",
-      ".product-gallery img",
+      '.gallery img',
     ];
 
     // Try to find images using common selectors
     for (const selector of imageSelectors) {
-      const images = $(selector)
-        .map((_, el) => {
-          const src =
-            $(el).attr("src") ||
-            $(el).attr("data-src") ||
-            $(el).attr("data-lazy-src");
-          return src ? new URL(src, url).href : null;
-        })
-        .get()
-        .filter(Boolean);
+      let images: string[] = [];
+      
+      if (selector.startsWith('meta')) {
+        const content = $(selector).attr('content');
+        if (content) {
+          const absoluteUrl = new URL(content, url).href;
+          if (isValidImageFormat(absoluteUrl)) {
+            images = [absoluteUrl];
+          }
+        }
+      } else {
+        images = $(selector)
+          .map((_, el) => {
+            const src = $(el).attr("src") ||
+                       $(el).attr("data-src") ||
+                       $(el).attr("data-lazy-src");
+            return src ? new URL(src, url).href : null;
+          })
+          .get()
+          .filter(url => url && isValidImageFormat(url));
+      }
 
       if (images.length > 0) {
         productData.images = images;

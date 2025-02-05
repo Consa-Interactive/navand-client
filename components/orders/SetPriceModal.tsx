@@ -31,9 +31,9 @@ export default function SetPriceModal({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [formData, setFormData] = useState({
-    price: order.price || 0,
-    shippingPrice: order.shippingPrice || 0,
-    localShippingPrice: order.localShippingPrice || 0,
+    price: order.price || "",
+    shippingPrice: order.shippingPrice || "",
+    localShippingPrice: order.localShippingPrice || "",
   });
 
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
@@ -62,9 +62,9 @@ export default function SetPriceModal({
     setSuccess(false);
     setError("");
     setFormData({
-      price: order.price || 0,
-      shippingPrice: order.shippingPrice || 0,
-      localShippingPrice: order.localShippingPrice || 0,
+      price: order.price || "",
+      shippingPrice: order.shippingPrice || "",
+      localShippingPrice: order.localShippingPrice || "",
     });
     onClose();
   }, [onClose, order]);
@@ -73,21 +73,22 @@ export default function SetPriceModal({
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: parseFloat(value) || 0,
+      [name]: value === "" ? "" : parseFloat(value) || 0,
     }));
   };
 
   const calculateTotal = () => {
     if (!exchangeRate) return "0.00";
 
-    // Convert TRY prices to USD
-    const usdPrice = (formData.price / exchangeRate) * order.quantity;
+    // Convert TRY prices to USD and handle empty strings
+    const usdPrice = (Number(formData.price) / exchangeRate) * order.quantity;
     const usdLocalShipping =
-      (formData.localShippingPrice / exchangeRate) * order.quantity;
+      (Number(formData.localShippingPrice) / exchangeRate) * order.quantity;
     // Shipping price is already in USD
-    const usdShipping = formData.shippingPrice * order.quantity;
+    const usdShipping = Number(formData.shippingPrice) * order.quantity;
 
     const total = usdPrice + usdShipping + usdLocalShipping;
+
     return total.toFixed(2);
   };
 
@@ -99,6 +100,10 @@ export default function SetPriceModal({
     setError("");
 
     try {
+      if (!exchangeRate) {
+        throw new Error("Exchange rate not available");
+      }
+
       const token = Cookies.get("token");
       const response = await fetch(`/api/orders/${order.id}`, {
         method: "PUT",
@@ -107,9 +112,9 @@ export default function SetPriceModal({
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          price: Number(formData.price),
+          price: Number(formData.price) / exchangeRate,
           shippingPrice: Number(formData.shippingPrice),
-          localShippingPrice: Number(formData.localShippingPrice),
+          localShippingPrice: Number(formData.localShippingPrice) / exchangeRate,
           status: "PROCESSING",
         }),
       });
@@ -142,9 +147,9 @@ export default function SetPriceModal({
   useEffect(() => {
     if (isOpen) {
       setFormData({
-        price: order.price || 0,
-        shippingPrice: order.shippingPrice || 0,
-        localShippingPrice: order.localShippingPrice || 0,
+        price: order.price || "",
+        shippingPrice: order.shippingPrice || "",
+        localShippingPrice: order.localShippingPrice || "",
       });
       setSuccess(false);
       setError("");

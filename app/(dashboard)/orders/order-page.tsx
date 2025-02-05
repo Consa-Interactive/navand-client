@@ -28,6 +28,8 @@ import {
   DollarSign,
   CheckCircle,
   FileText,
+  Tag,
+  ShoppingCart,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import AddOrderModal from "@/components/orders/AddOrderModal";
@@ -41,15 +43,23 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
+import LabelModal from "@/components/orders/LabelModal";
+import PurchaseOrderModal from "@/components/orders/PurchaseOrderModal";
+import BulkUpdateModal from "@/components/orders/BulkUpdateModal";
+import { ACTIVE_ORDER_STATUSES, PASSIVE_ORDER_STATUSES, STATUS_FILTERS } from "@/constants/orderStatuses";
 
 type OrderStatus =
   | "PENDING"
   | "PROCESSING"
+  | "CONFIRMED"
   | "PURCHASED"
   | "SHIPPED"
   | "DELIVERED"
-  | "CONFIRMED"
-  | "CANCELLED";
+  | "CANCELLED"
+  | "PREPAID"
+  | "RECEIVED_IN_TURKEY"
+  | "DELIVERED_TO_WAREHOUSE"
+  | "RETURNED";
 
 interface OrderItem {
   id: number;
@@ -65,6 +75,7 @@ interface OrderItem {
   productLink: string;
   imageUrl: string;
   notes: string;
+  orderNumber: string;
   createdAt: Date;
   updatedAt: Date;
   userId: number;
@@ -119,26 +130,32 @@ const statusColors = {
     text: "text-indigo-700 dark:text-indigo-500",
     dot: "bg-indigo-500",
   },
+  RECEIVED_IN_TURKEY: {
+    bg: "bg-indigo-50 dark:bg-indigo-900/20",
+    text: "text-indigo-700 dark:text-indigo-500",
+    dot: "bg-indigo-500",
+  },
+  DELIVERED_TO_WAREHOUSE: {
+    bg: "bg-purple-50 dark:bg-purple-900/20",
+    text: "text-purple-700 dark:text-purple-500",
+    dot: "bg-purple-500",
+  },
+  RETURNED: {
+    bg: "bg-orange-50 dark:bg-orange-900/20",
+    text: "text-orange-700 dark:text-orange-500",
+    dot: "bg-orange-500",
+  },
 };
 
-const STATUS_FILTERS = [
+const CUSTOMER_STATUS_FILTERS = [
   { label: "All", value: "ALL" },
-  { label: "Active", value: "ACTIVE", color: "emerald" },
   { label: "Pending", value: "PENDING", color: "yellow" },
   { label: "Processing", value: "PROCESSING", color: "blue" },
   { label: "Confirmed", value: "CONFIRMED", color: "emerald" },
   { label: "Purchased", value: "PURCHASED", color: "pink" },
-  { label: "In Turkey", value: "RECEIVED_IN_TURKEY", color: "indigo" },
-  { label: "Arrived in Erbil", value: "ARRIVED_IN_ERBIL", color: "purple" },
+  { label: "Delivered", value: "DELIVERED", color: "green" },
   { label: "Canceled", value: "CANCELLED", color: "red" },
 ];
-
-const ACTIVE_ORDER_STATUSES = [
-  "CONFIRMED",
-  "PURCHASED",
-  "RECEIVED_IN_TURKEY",
-  "ARRIVED_IN_ERBIL",
-] as const;
 
 // Function to fetch orders
 const fetchOrders = async () => {
@@ -174,7 +191,8 @@ const advancedSearch = (order: Order, term: string) => {
     order.user.name.toLowerCase().includes(searchTerm) ||
     order.user.phoneNumber.toLowerCase().includes(searchTerm) ||
     order.status.toLowerCase().includes(searchTerm) ||
-    order.id.toString().includes(searchTerm)
+    order.id.toString().includes(searchTerm) ||
+    (order.orderNumber?.toLowerCase() || "").includes(searchTerm)
   );
 };
 
@@ -186,20 +204,27 @@ const ActionsCell = ({
   isAdmin,
   setSelectedOrderForAction,
   handlePrepaidClick,
+  handleReceivedInTurkey,
   setSelectedOrderForPrice,
+  setSelectedOrderForLabel,
+  setSelectedOrderForPurchase,
 }: {
   row: Row<Order>;
   onEditOrder: (order: Order) => void;
   isAdmin: boolean;
   setSelectedOrderForAction: (order: Order) => void;
   handlePrepaidClick: (order: Order) => Promise<void>;
+  handleReceivedInTurkey: (order: Order) => Promise<void>;
   setSelectedOrderForPrice: (order: Order) => void;
+  setSelectedOrderForLabel: (order: Order) => void;
+  setSelectedOrderForPurchase: (order: Order) => void;
 }) => {
   const router = useRouter();
   const order = row.original;
   const canSetPrice = isAdmin && order.status === "PENDING";
   const canConfirmOrder = isAdmin && order.status === "PROCESSING";
   const canTogglePrepaid = isAdmin && order.status === "CONFIRMED";
+  const canMarkAsReceived = isAdmin && order.status === "PURCHASED";
 
   return (
     <div className="flex items-center justify-end gap-1">
@@ -212,13 +237,23 @@ const ActionsCell = ({
       </button>
 
       {isAdmin && (
-        <button
-          onClick={() => onEditOrder(order)}
-          className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500 dark:hover:bg-gray-700"
-          title="Edit Order"
-        >
-          <Edit className="h-4 w-4" />
-        </button>
+        <>
+          <button
+            onClick={() => onEditOrder(order)}
+            className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500 dark:hover:bg-gray-700"
+            title="Edit Order"
+          >
+            <Edit className="h-4 w-4" />
+          </button>
+
+          <button
+            onClick={() => setSelectedOrderForLabel(order)}
+            className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500 dark:hover:bg-gray-700"
+            title="Generate Label"
+          >
+            <Tag className="h-4 w-4" />
+          </button>
+        </>
       )}
 
       {canSetPrice && (
@@ -252,6 +287,25 @@ const ActionsCell = ({
           title={order.prepaid ? "Mark as Not Prepaid" : "Mark as Prepaid"}
         >
           <DollarSign className="h-4 w-4" />
+        </button>
+      )}
+
+      {canMarkAsReceived && (
+        <button
+          onClick={() => handleReceivedInTurkey(order)}
+          className="inline-flex items-center justify-center rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-400 dark:hover:bg-indigo-900/30 h-8 w-8"
+          title="Mark as Received in Turkey"
+        >
+          <Package className="h-4 w-4" />
+        </button>
+      )}
+
+      {order.status === "CONFIRMED" && (
+        <button
+          onClick={() => setSelectedOrderForPurchase(order)}
+          className="inline-flex items-center justify-center rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30 h-8 w-8"
+        >
+          <ShoppingCart className="h-4 w-4" />
         </button>
       )}
     </div>
@@ -350,8 +404,11 @@ const MobileOrderCard = ({
   isAdmin,
   router,
   handlePrepaidClick,
+  handleReceivedInTurkey,
   setSelectedOrderForPrice,
   setSelectedImage,
+  setSelectedOrderForLabel,
+  setSelectedOrderForPurchase,
 }: {
   order: Order;
   isSelected: boolean;
@@ -361,12 +418,16 @@ const MobileOrderCard = ({
   isAdmin: boolean;
   router: AppRouterInstance;
   handlePrepaidClick: (order: Order) => Promise<void>;
+  handleReceivedInTurkey: (order: Order) => Promise<void>;
   setSelectedOrderForPrice: (order: Order) => void;
   setSelectedImage: (image: { src: string; alt: string } | null) => void;
+  setSelectedOrderForLabel: (order: Order) => void;
+  setSelectedOrderForPurchase: (order: Order) => void;
 }) => {
   const canSetPrice = isAdmin && order.status === "PENDING";
   const canConfirmOrder = isAdmin && order.status === "PROCESSING";
   const canTogglePrepaid = isAdmin && order.status === "CONFIRMED";
+  const canMarkAsReceived = isAdmin && order.status === "PURCHASED";
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
@@ -470,7 +531,7 @@ const MobileOrderCard = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="font-mono text-lg font-medium text-gray-900 dark:text-white">
-              ${order.price.toFixed(2)}
+              ${(order.price + order.shippingPrice + order.localShippingPrice).toFixed(2)}
             </div>
             {order.prepaid ? (
               <span className="inline-flex items-center gap-1 rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20 dark:bg-green-900/20">
@@ -514,13 +575,23 @@ const MobileOrderCard = ({
         </button>
 
         {isAdmin && (
-          <button
-            onClick={onEdit}
-            className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500 dark:hover:bg-gray-700"
-            title="Edit Order"
-          >
-            <Edit className="h-4 w-4" />
-          </button>
+          <>
+            <button
+              onClick={onEdit}
+              className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500 dark:hover:bg-gray-700"
+              title="Edit Order"
+            >
+              <Edit className="h-4 w-4" />
+            </button>
+
+            <button
+              onClick={() => setSelectedOrderForLabel(order)}
+              className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500 dark:hover:bg-gray-700"
+              title="Generate Label"
+            >
+              <Tag className="h-4 w-4" />
+            </button>
+          </>
         )}
 
         {canSetPrice && (
@@ -554,6 +625,25 @@ const MobileOrderCard = ({
             title={order.prepaid ? "Mark as Not Prepaid" : "Mark as Prepaid"}
           >
             <DollarSign className="h-4 w-4" />
+          </button>
+        )}
+
+        {canMarkAsReceived && (
+          <button
+            onClick={() => handleReceivedInTurkey(order)}
+            className="inline-flex items-center justify-center rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-400 dark:hover:bg-indigo-900/30 h-8 w-8"
+            title="Mark as Received in Turkey"
+          >
+            <Package className="h-4 w-4" />
+          </button>
+        )}
+
+        {order.status === "CONFIRMED" && (
+          <button
+            onClick={() => setSelectedOrderForPurchase(order)}
+            className="inline-flex items-center justify-center rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30 h-8 w-8"
+          >
+            <ShoppingCart className="h-4 w-4" />
           </button>
         )}
       </div>
@@ -622,6 +712,9 @@ export default function OrdersPage() {
     src: string;
     alt: string;
   } | null>(null);
+  const [selectedOrderForLabel, setSelectedOrderForLabel] = useState<Order | null>(null);
+  const [selectedOrderForPurchase, setSelectedOrderForPurchase] = useState<Order | null>(null);
+  const [isBulkUpdateModalOpen, setIsBulkUpdateModalOpen] = useState(false);
 
   // Get status and country from URL
   const activeStatus = searchParams.get("status")?.toUpperCase() || "ALL";
@@ -678,7 +771,15 @@ export default function OrdersPage() {
                 | "CONFIRMED"
                 | "PURCHASED"
                 | "RECEIVED_IN_TURKEY"
-                | "ARRIVED_IN_ERBIL"
+                | "DELIVERED_TO_WAREHOUSE"
+            ) 
+          : activeStatus === "PASSIVE"
+          ? PASSIVE_ORDER_STATUSES.includes(
+              order.status as
+                | "DELIVERED"
+                | "DELIVERED_TO_WAREHOUSE"
+                | "CANCELLED"
+                | "RETURNED"
             )
           : order.status === activeStatus);
       const matchesCountry =
@@ -785,24 +886,29 @@ export default function OrdersPage() {
           <ArrowUpDown className="h-4 w-4" />
         </div>
       ),
-      cell: (info) => (
-        <div className="flex items-center gap-2">
-          <div className="font-mono font-medium text-gray-900 dark:text-white">
-            ${info.getValue().toFixed(2)}
+      cell: (info) => {
+        const order = info.row.original;
+        const totalPrice = order.price + order.shippingPrice + order.localShippingPrice;
+        
+        return (
+          <div className="flex items-center gap-2">
+            <div className="font-mono font-medium text-gray-900 dark:text-white">
+              ${totalPrice.toFixed(2)}
+            </div>
+            {order.prepaid ? (
+              <span className="inline-flex items-center gap-1 rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20 dark:bg-green-900/20">
+                <span className="h-1 w-1 rounded-full bg-green-500"></span>
+                PAID
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-md bg-yellow-50 px-2 py-1 text-xs font-medium text-yellow-700 ring-1 ring-inset ring-yellow-600/20 dark:bg-yellow-900/20">
+                <span className="h-1 w-1 rounded-full bg-yellow-500"></span>
+                UNPAID
+              </span>
+            )}
           </div>
-          {info.row.original.prepaid ? (
-            <span className="inline-flex items-center gap-1 rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20 dark:bg-green-900/20">
-              <span className="h-1 w-1 rounded-full bg-green-500"></span>
-              PAID
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 rounded-md bg-yellow-50 px-2 py-1 text-xs font-medium text-yellow-700 ring-1 ring-inset ring-yellow-600/20 dark:bg-yellow-900/20">
-              <span className="h-1 w-1 rounded-full bg-yellow-500"></span>
-              UNPAID
-            </span>
-          )}
-        </div>
-      ),
+        );
+      },
     }),
     columnHelper.accessor("status", {
       header: ({ column }) => (
@@ -891,7 +997,10 @@ export default function OrdersPage() {
           isAdmin={isAdmin}
           setSelectedOrderForAction={setSelectedOrderForAction}
           handlePrepaidClick={handlePrepaidClick}
+          handleReceivedInTurkey={handleReceivedInTurkey}
           setSelectedOrderForPrice={setSelectedOrderForPrice}
+          setSelectedOrderForLabel={setSelectedOrderForLabel}
+          setSelectedOrderForPurchase={setSelectedOrderForPurchase}
         />
       ),
     }),
@@ -995,7 +1104,10 @@ export default function OrdersPage() {
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to update prepaid status");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to update prepaid status");
+      }
 
       const updatedOrder = await response.json();
       updateOrder(updatedOrder);
@@ -1003,6 +1115,36 @@ export default function OrdersPage() {
     } catch (error) {
       console.error("Error updating prepaid status:", error);
       toast.error("Failed to update prepaid status");
+    }
+  };
+
+  const handleReceivedInTurkey = async (order: Order) => {
+    try {
+      const token = Cookies.get("token");
+      if (!token) return;
+
+      const response = await fetch(`/api/orders/${order.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          status: "RECEIVED_IN_TURKEY",
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to update order status");
+      }
+
+      const updatedOrder = await response.json();
+      updateOrder(updatedOrder);
+      toast.success("Order marked as received in Turkey");
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      toast.error("Failed to update order status");
     }
   };
 
@@ -1124,13 +1266,13 @@ export default function OrdersPage() {
         {/* Header */}
         <div className="flex flex-col gap-4">
           <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
-            Orders
+            {isAdmin ? "Orders" : "My Orders"}
           </h1>
 
           {/* Status Filters */}
           <div className="no-scrollbar flex items-center gap-2 overflow-x-auto pb-2">
             <div className="flex flex-nowrap gap-2">
-              {STATUS_FILTERS.map((status) => (
+              {(isAdmin ? STATUS_FILTERS : CUSTOMER_STATUS_FILTERS).map((status) => (
                 <button
                   key={status.value}
                   onClick={() => updateFilters(status.value, activeCountry)}
@@ -1195,16 +1337,14 @@ export default function OrdersPage() {
                       <div className="flex items-center justify-center">
                         <input
                           type="checkbox"
-                          className="h-4 w-4 rounded-md border-gray-300 text-primary shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-700"
+                          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                           checked={
-                            orders.length > 0 &&
-                            selectedOrders.length === orders.length
+                            filteredOrders.length > 0 &&
+                            filteredOrders.every((order) => selectedOrders.includes(order.id))
                           }
                           onChange={(e) => {
                             if (e.target.checked) {
-                              setSelectedOrders(
-                                orders.map((order: OrderType) => order.id)
-                              );
+                              setSelectedOrders(filteredOrders.map((order) => order.id));
                             } else {
                               setSelectedOrders([]);
                             }
@@ -1431,8 +1571,11 @@ export default function OrdersPage() {
                     isAdmin={isAdmin}
                     router={router}
                     handlePrepaidClick={handlePrepaidClick}
+                    handleReceivedInTurkey={handleReceivedInTurkey}
                     setSelectedOrderForPrice={setSelectedOrderForPrice}
                     setSelectedImage={setSelectedImage}
+                    setSelectedOrderForLabel={setSelectedOrderForLabel}
+                    setSelectedOrderForPurchase={setSelectedOrderForPurchase}
                   />
                 ))}
 
@@ -1522,23 +1665,71 @@ export default function OrdersPage() {
           />
         )}
 
-        {/* Floating Invoice Button */}
+        {/* Floating Buttons */}
         {isAdmin && selectedOrders.length > 0 && (
           <AnimatePresence>
             {selectedOrders.length > 0 && (
-              <motion.button
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0, opacity: 0 }}
-                whileHover={{ scale: 1.05 }}
-                onClick={handleCreateInvoice}
-                className="fixed bottom-8 right-8 flex items-center gap-2 bg-primary text-white px-4 py-3 rounded-full shadow-lg transition-colors duration-200"
-              >
-                <FileText className="w-5 h-5" />
-                <span>Generate Invoice ({selectedOrders.length})</span>
-              </motion.button>
+              <div className="fixed bottom-8 right-8 flex items-center gap-2 sm:gap-4">
+                <motion.button
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  whileHover={{ scale: 1.05 }}
+                  onClick={() => setIsBulkUpdateModalOpen(true)}
+                  className="flex items-center gap-1 sm:gap-2 bg-primary text-white px-2 sm:px-4 py-2 sm:py-3 rounded-full shadow-lg transition-colors duration-200 text-xs sm:text-sm"
+                >
+                  <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span>Bulk ({selectedOrders.length})</span>
+                </motion.button>
+                <motion.button
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  whileHover={{ scale: 1.05 }}
+                  onClick={handleCreateInvoice}
+                  className="flex items-center gap-1 sm:gap-2 bg-primary text-white px-2 sm:px-4 py-2 sm:py-3 rounded-full shadow-lg transition-colors duration-200 text-xs sm:text-sm"
+                >
+                  <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span>Invoice ({selectedOrders.length})</span>
+                </motion.button>
+              </div>
             )}
           </AnimatePresence>
+        )}
+
+        {/* Bulk Update Modal */}
+        {selectedOrders.length > 0 && (
+          <BulkUpdateModal
+            isOpen={isBulkUpdateModalOpen}
+            onClose={() => {
+              setIsBulkUpdateModalOpen(false);
+              setSelectedOrders([]);
+            }}
+            selectedOrders={selectedOrders.map(id => orders.find(order => order.id === id)).filter(Boolean) as OrderType[]}
+            onOrdersUpdated={async () => {
+              await fetchOrders();
+              setSelectedOrders([]);
+            }}
+          />
+        )}
+
+        {/* Label Modal */}
+        {selectedOrderForLabel && (
+          <LabelModal
+            isOpen={!!selectedOrderForLabel}
+            onClose={() => setSelectedOrderForLabel(null)}
+            order={selectedOrderForLabel as OrderType}
+            onOrderUpdated={triggerOrderUpdate}
+          />
+        )}
+
+        {selectedOrderForPurchase && (
+          <PurchaseOrderModal
+            isOpen={!!selectedOrderForPurchase}
+            onClose={() => setSelectedOrderForPurchase(null)}
+            order={selectedOrderForPurchase as OrderType}
+            onOrderUpdated={fetchOrders}
+          />
         )}
       </div>
 

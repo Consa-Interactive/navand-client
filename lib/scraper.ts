@@ -1,10 +1,65 @@
 import axios from "axios";
-import { load } from "cheerio"; // Updated import for cheerio
+import { load } from "cheerio";
 
 interface ScraperResult {
   title?: string;
   image?: string;
   error?: string;
+}
+
+// Helper function to validate image URL format
+function isValidImageFormat(url: string): boolean {
+  const validExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+  const lowercaseUrl = url.toLowerCase();
+  return validExtensions.some(ext => lowercaseUrl.endsWith(ext));
+}
+
+// Helper function to find product images
+function findProductImages($: ReturnType<typeof load>): string[] {
+  const images: string[] = [];
+
+  // Priority selectors for product images
+  const selectors = [
+    // OpenGraph and meta tags
+    'meta[property="og:image"]',
+    'meta[name="twitter:image"]',
+    'meta[property="product:image"]',
+    
+    // Common product image selectors
+    '.product-image img',
+    '.product-gallery img',
+    '.product__image img',
+    '#product-image',
+    '[data-product-image]',
+    '[data-product-photo]',
+    
+    // Fallback to any image that might be a product image
+    'img[src*="product"]',
+    'img[src*="products"]',
+    '.gallery img',
+  ];
+
+  // Try each selector
+  for (const selector of selectors) {
+    if (selector.startsWith('meta')) {
+      const content = $(selector).attr('content');
+      if (content && isValidImageFormat(content)) {
+        images.push(content);
+      }
+    } else {
+      $(selector).each((_, el) => {
+        const src = $(el).attr('src') || $(el).attr('data-src') || $(el).attr('data-lazy-src');
+        if (src && isValidImageFormat(src)) {
+          images.push(src);
+        }
+      });
+    }
+
+    // If we found valid images, no need to continue
+    if (images.length > 0) break;
+  }
+
+  return images;
 }
 
 async function scrapeProductPage(url: string): Promise<ScraperResult> {
@@ -18,7 +73,7 @@ async function scrapeProductPage(url: string): Promise<ScraperResult> {
     });
 
     // Load the HTML into Cheerio
-    const $ = load(html); // Updated to use named import `load`
+    const $ = load(html);
 
     // Extract the title from the <title> tag or meta tags
     const title =
@@ -26,11 +81,9 @@ async function scrapeProductPage(url: string): Promise<ScraperResult> {
       $('meta[name="title"]').attr("content") ||
       $("title").text();
 
-    // Extract the image from Open Graph or prominent <img> tags
-    const image =
-      $('meta[property="og:image"]').attr("content") ||
-      $('meta[name="twitter:image"]').attr("content") ||
-      $("img").first().attr("src");
+    // Find product images
+    const images = findProductImages($);
+    const image = images.length > 0 ? images[0] : undefined;
 
     // Return the result
     return { title, image };

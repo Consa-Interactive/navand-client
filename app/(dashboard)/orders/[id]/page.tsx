@@ -60,13 +60,6 @@ const statusColors = {
     ring: "ring-blue-500",
     icon: ShoppingCart,
   },
-  CONFIRMED: {
-    bg: "bg-emerald-50 dark:bg-emerald-900/20",
-    text: "text-emerald-700 dark:text-emerald-500",
-    dot: "bg-emerald-500",
-    ring: "ring-emerald-500",
-    icon: CheckCheck,
-  },
   PURCHASED: {
     bg: "bg-pink-50 dark:bg-pink-900/20",
     text: "text-pink-700 dark:text-pink-500",
@@ -74,19 +67,19 @@ const statusColors = {
     ring: "ring-pink-500",
     icon: CheckCircle2,
   },
-  RECEIVED_IN_TURKEY: {
-    bg: "bg-indigo-50 dark:bg-indigo-900/20",
-    text: "text-indigo-700 dark:text-indigo-500",
-    dot: "bg-indigo-500",
-    ring: "ring-indigo-500",
-    icon: Package,
-  },
-  ARRIVED_IN_ERBIL: {
+  SHIPPED: {
     bg: "bg-purple-50 dark:bg-purple-900/20",
     text: "text-purple-700 dark:text-purple-500",
     dot: "bg-purple-500",
     ring: "ring-purple-500",
-    icon: Box,
+    icon: Package,
+  },
+  DELIVERED: {
+    bg: "bg-green-50 dark:bg-green-900/20",
+    text: "text-green-700 dark:text-green-500",
+    dot: "bg-green-500",
+    ring: "ring-green-500",
+    icon: CheckCheck,
   },
   CANCELLED: {
     bg: "bg-red-50 dark:bg-red-900/20",
@@ -95,16 +88,28 @@ const statusColors = {
     ring: "ring-red-500",
     icon: XCircle,
   },
+  CONFIRMED: {
+    bg: "bg-emerald-50 dark:bg-emerald-900/20",
+    text: "text-emerald-700 dark:text-emerald-500",
+    dot: "bg-emerald-500",
+    ring: "ring-emerald-500",
+    icon: CheckCheck,
+  },
+  RECEIVED_IN_TURKEY: {
+    bg: "bg-indigo-50 dark:bg-indigo-900/20",
+    text: "text-indigo-700 dark:text-indigo-500",
+    dot: "bg-indigo-500",
+    ring: "ring-indigo-500",
+    icon: Package,
+  },
+  DELIVERED_TO_WAREHOUSE: {
+    bg: "bg-purple-50 dark:bg-purple-900/20",
+    text: "text-purple-700 dark:text-purple-500",
+    dot: "bg-purple-500",
+    ring: "ring-purple-500",
+    icon: Box,
+  },
 };
-
-/*
-export const ACTIVE_ORDER_STATUSES: ReadonlyArray<string> = [
-  "CONFIRMED",
-  "PURCHASED",
-  "RECEIVED_IN_TURKEY",
-  "ARRIVED_IN_ERBIL",
-];
-*/
 
 export default function OrderDetailsPage() {
   const params = useParams();

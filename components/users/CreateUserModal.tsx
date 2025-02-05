@@ -11,7 +11,7 @@ import {
   MapPin,
   CheckCircle2,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import Cookies from "js-cookie";
 
 interface CreateUserModalProps {
@@ -19,13 +19,6 @@ interface CreateUserModalProps {
   onClose: () => void;
   onUserCreated: () => void;
 }
-
-const STEPS = [
-  { id: 1, title: "Personal Information", icon: User },
-  { id: 2, title: "Contact Information", icon: Phone },
-  { id: 3, title: "Security", icon: Lock },
-  { id: 4, title: "Address", icon: MapPin },
-];
 
 const KURDISTAN_CITIES = [
   "Erbil",
@@ -41,8 +34,6 @@ export default function CreateUserModal({
   onClose,
   onUserCreated,
 }: CreateUserModalProps) {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [direction, setDirection] = useState(0);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -78,23 +69,8 @@ export default function CreateUserModal({
     }
   };
 
-  const handleNext = () => {
-    setDirection(1);
-    setCurrentStep((prev) => Math.min(prev + 1, STEPS.length));
-  };
-
-  const handleBack = () => {
-    setDirection(-1);
-    setCurrentStep((prev) => Math.max(prev - 1, 1));
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (currentStep < STEPS.length) {
-      handleNext();
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
@@ -135,8 +111,8 @@ export default function CreateUserModal({
       setShowSuccess(true);
       setTimeout(() => {
         setShowSuccess(false);
-        onUserCreated();
         onClose();
+        onUserCreated();
       }, 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create user");
@@ -145,326 +121,247 @@ export default function CreateUserModal({
     }
   };
 
-  const slideVariants = {
-    enter: (direction: number) => ({
-      x: direction > 0 ? 50 : -50,
-      opacity: 0,
-    }),
-    center: {
-      x: 0,
-      opacity: 1,
-    },
-    exit: (direction: number) => ({
-      x: direction > 0 ? -50 : 50,
-      opacity: 0,
-    }),
-  };
-
-  const renderStep = () => {
-    switch (currentStep) {
-      case 1:
-        return (
-          <motion.div
-            key="step1"
-            custom={direction}
-            variants={slideVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ duration: 0.2 }}
-            className="space-y-4"
-          >
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  First Name
-                </label>
-                <input
-                  type="text"
-                  name="firstName"
-                  value={formData.firstName}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Last Name
-                </label>
-                <input
-                  type="text"
-                  name="lastName"
-                  value={formData.lastName}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200"
-                  required
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Role
-              </label>
-              <select
-                name="role"
-                value={formData.role}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200"
-              >
-                <option value="CUSTOMER">Customer</option>
-                <option value="WORKER">Worker</option>
-                <option value="ADMIN">Admin</option>
-              </select>
-            </div>
-          </motion.div>
-        );
-      case 2:
-        return (
-          <motion.div
-            key="step2"
-            custom={direction}
-            variants={slideVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ duration: 0.2 }}
-            className="space-y-4"
-          >
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Mobile Number
-              </label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-500">
-                  +964
-                </span>
-                <input
-                  type="text"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  className="w-full pl-16 pr-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200"
-                  placeholder="750XXXXXXX"
-                  required
-                  maxLength={10}
-                  minLength={10}
-                />
-              </div>
-            </div>
-          </motion.div>
-        );
-      case 3:
-        return (
-          <motion.div
-            key="step3"
-            custom={direction}
-            variants={slideVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ duration: 0.2 }}
-            className="space-y-4"
-          >
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2"
-                >
-                  {showPassword ? (
-                    <EyeOff className="w-4 h-4 text-gray-500" />
-                  ) : (
-                    <Eye className="w-4 h-4 text-gray-500" />
-                  )}
-                </button>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Confirm Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200"
-                  required
-                />
-              </div>
-            </div>
-          </motion.div>
-        );
-      case 4:
-        return (
-          <motion.div
-            key="step4"
-            custom={direction}
-            variants={slideVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ duration: 0.2 }}
-            className="space-y-4"
-          >
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Address
-              </label>
-              <input
-                type="text"
-                name="address"
-                value={formData.address}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                City
-              </label>
-              <select
-                name="city"
-                value={formData.city}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200"
-              >
-                <option value="">Select a city</option>
-                {KURDISTAN_CITIES.map((city) => (
-                  <option key={city} value={city}>
-                    {city}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </motion.div>
-        );
-      default:
-        return null;
-    }
-  };
-
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-3xl shadow-lg">
-        <div className="relative p-6">
-          <button
-            onClick={onClose}
-            className="absolute right-6 top-6 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+      <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        {showSuccess ? (
+          <motion.div
+            initial={{ scale: 0.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="p-6 text-center space-y-4"
           >
-            <X className="w-5 h-5" />
-          </button>
-
-          {showSuccess ? (
             <motion.div
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.2 }}
-              className="flex flex-col items-center justify-center py-12"
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
             >
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-              >
-                <CheckCircle2 className="w-16 h-16 text-green-500" />
-              </motion.div>
-              <motion.h2
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="mt-4 text-xl font-semibold text-gray-900 dark:text-white"
-              >
-                User Created Successfully
-              </motion.h2>
+              <CheckCircle2 className="w-20 h-20 text-primary mx-auto" />
             </motion.div>
-          ) : (
-            <form onSubmit={handleSubmit}>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
-                Create New User
-              </h2>
+            <motion.h2
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="text-2xl font-bold text-gray-900 dark:text-white"
+            >
+              User Created Successfully!
+            </motion.h2>
+          </motion.div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Create New User</h2>
+              <button
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-              {/* Progress Steps */}
-              <div className="flex justify-between mb-8">
-                {STEPS.map((step) => (
-                  <div
-                    key={step.id}
-                    className={`flex flex-col items-center ${
-                      currentStep >= step.id
-                        ? "text-primary"
-                        : "text-gray-400 dark:text-gray-500"
-                    }`}
-                  >
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 transition-colors duration-200 ${
-                        currentStep >= step.id
-                          ? "bg-primary/10"
-                          : "bg-gray-100 dark:bg-gray-700"
-                      }`}
-                    >
-                      <step.icon className="w-4 h-4" />
-                    </div>
-                    <span className="text-[10px] font-medium">
-                      {step.title}
-                    </span>
+            <form onSubmit={handleSubmit} className="p-6 space-y-6">
+              {/* Personal Information Section */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-200 flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
+                  <User className="w-4 h-4" />
+                  Personal Information
+                </h3>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                      First Name
+                    </label>
+                    <input
+                      type="text"
+                      name="firstName"
+                      value={formData.firstName}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                      required
+                    />
                   </div>
-                ))}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                      Last Name
+                    </label>
+                    <input
+                      type="text"
+                      name="lastName"
+                      value={formData.lastName}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                    Role
+                  </label>
+                  <select
+                    name="role"
+                    value={formData.role}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                  >
+                    <option value="CUSTOMER">Customer</option>
+                    <option value="WORKER">Worker</option>
+                    <option value="ADMIN">Admin</option>
+                  </select>
+                </div>
               </div>
 
-              {/* Form Steps */}
-              <AnimatePresence mode="wait" custom={direction}>
-                {renderStep()}
-              </AnimatePresence>
+              {/* Contact Information Section */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-200 flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
+                  <Phone className="w-4 h-4" />
+                  Contact Information
+                </h3>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                    Mobile Number
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
+                      +964
+                    </span>
+                    <input
+                      type="text"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      className="w-full pl-16 pr-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                      placeholder="750XXXXXXX"
+                      required
+                      maxLength={10}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Security Section */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-200 flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
+                  <Lock className="w-4 h-4" />
+                  Security
+                </h3>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                      Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        name="password"
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                      Confirm Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        name="confirmPassword"
+                        value={formData.confirmPassword}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Address Section */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-200 flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
+                  <MapPin className="w-4 h-4" />
+                  Address Information
+                </h3>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                      City
+                    </label>
+                    <select
+                      name="city"
+                      value={formData.city}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                    >
+                      <option value="">Select a city</option>
+                      {KURDISTAN_CITIES.map((city) => (
+                        <option key={city} value={city}>
+                          {city}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                      Address Details
+                    </label>
+                    <input
+                      type="text"
+                      name="address"
+                      value={formData.address}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                      placeholder="Enter detailed address"
+                    />
+                  </div>
+                </div>
+              </div>
 
               {error && (
-                <p className="mt-4 text-sm text-red-500 dark:text-red-400">
-                  {error}
-                </p>
+                <p className="text-sm text-red-500 dark:text-red-400">{error}</p>
               )}
 
-              <div className="mt-6 flex justify-between">
-                {currentStep > 1 && (
-                  <button
-                    type="button"
-                    onClick={handleBack}
-                    className="px-6 py-2.5 text-sm font-medium rounded-xl border-2 border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all duration-200"
-                  >
-                    Back
-                  </button>
-                )}
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 rounded-xl transition-colors duration-200"
+                >
+                  Cancel
+                </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`px-6 py-2.5 text-sm font-medium rounded-xl border-2 border-primary text-white bg-primary hover:bg-primary/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
-                    currentStep === 1 ? "ml-auto" : ""
-                  }`}
+                  className="px-4 py-2.5 text-sm font-medium text-white bg-primary hover:bg-primary-dark active:bg-primary-darker rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 ease-in-out transform hover:-translate-y-0.5"
                 >
-                  {loading
-                    ? "Creating..."
-                    : currentStep === STEPS.length
-                    ? "Create User"
-                    : "Next"}
+                  {loading ? "Creating..." : "Create User"}
                 </button>
               </div>
             </form>
-          )}
-        </div>
+          </>
+        )}
       </div>
     </div>
   );

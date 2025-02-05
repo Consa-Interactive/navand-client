@@ -1,24 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   X,
-  Link,
   Package,
   User,
   CheckCircle2,
   Upload,
-  Phone,
 } from "lucide-react";
 import { useApp } from "@/providers/AppProvider";
 import Cookies from "js-cookie";
 import Image from "next/image";
-
-const STEPS = [
-  { id: 1, title: "Product Details", icon: Package },
-  { id: 2, title: "Customer Info", icon: User },
-];
 
 interface AddOrderModalProps {
   isOpen: boolean;
@@ -33,8 +26,6 @@ export default function AddOrderModal({
 }: AddOrderModalProps) {
   const { user } = useApp();
   const isAdminOrWorker = user?.role === "ADMIN" || user?.role === "WORKER";
-  const [currentStep, setCurrentStep] = useState(1);
-  const [direction, setDirection] = useState(0);
   const [showSuccess, setShowSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -199,29 +190,11 @@ export default function AddOrderModal({
     }
   };
 
-  const handleNext = () => {
-    if (currentStep === 1) {
-      if (!formData.productLink.trim()) {
-        setError("Product link is required");
-        return;
-      }
-      setError(null);
-    }
-
-    setDirection(1);
-    setCurrentStep((prev) => Math.min(prev + 1, STEPS.length));
-  };
-
-  const handleBack = () => {
-    setError(null);
-    setDirection(-1);
-    setCurrentStep((prev) => Math.max(prev - 1, 1));
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (currentStep < STEPS.length) {
-      handleNext();
+    
+    if (!formData.productLink.trim()) {
+      setError("Product link is required");
       return;
     }
 
@@ -249,15 +222,14 @@ export default function AddOrderModal({
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to create order");
+        throw new Error("Failed to create order");
       }
 
       setShowSuccess(true);
       setTimeout(async () => {
         setShowSuccess(false);
-        await onOrderCreated();
         onClose();
+        await onOrderCreated();
       }, 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create order");
@@ -266,376 +238,280 @@ export default function AddOrderModal({
     }
   };
 
-  const slideVariants = {
-    enter: (direction: number) => ({
-      x: direction > 0 ? 50 : -50,
-      opacity: 0,
-    }),
-    center: {
-      x: 0,
-      opacity: 1,
-    },
-    exit: (direction: number) => ({
-      x: direction > 0 ? -50 : 50,
-      opacity: 0,
-    }),
-  };
-
-  const renderStep = () => {
-    switch (currentStep) {
-      case 1:
-        return (
-          <motion.div
-            key="step1"
-            custom={direction}
-            variants={slideVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ duration: 0.2 }}
-            className="space-y-4"
-          >
-            {/* Image Upload */}
-            <div
-              className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all
-                ${
-                  dragActive
-                    ? "border-primary bg-primary/5 scale-[1.02]"
-                    : "border-gray-300 dark:border-gray-600"
-                }
-                ${uploadedImage ? "border-success bg-success/5" : ""}`}
-              onDragEnter={handleDrag}
-              onDragLeave={handleDrag}
-              onDragOver={handleDrag}
-              onDrop={handleDrop}
-            >
-              {uploadedImage ? (
-                <div className="relative aspect-video w-full overflow-hidden rounded-lg">
-                  <Image
-                    src={uploadedImage}
-                    alt="Uploaded"
-                    className="h-full w-full object-cover"
-                    width={400}
-                    height={300}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setUploadedImage(null)}
-                    className="absolute right-2 top-2 rounded-full bg-red-500 p-1 text-white hover:bg-red-600"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <input
-                    type="file"
-                    id="dropzone-file"
-                    className="hidden"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                  />
-                  <label
-                    htmlFor="dropzone-file"
-                    className="flex flex-col items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <Upload className="h-10 w-10 text-gray-400" />
-                    <p className="text-sm text-gray-500">
-                      Drop your image here, or{" "}
-                      <span className="text-primary">browse</span>
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      JPG, PNG, GIF (Max 5MB)
-                    </p>
-                  </label>
-                </>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Product Link <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <input
-                  type="url"
-                  name="productLink"
-                  value={formData.productLink}
-                  onChange={handleInputChange}
-                  className={`w-full pl-10 pr-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border ${
-                    error
-                      ? "border-red-500"
-                      : "border-gray-200 dark:border-gray-600"
-                  } focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200 ${
-                    isScrapingLoading ? "pr-10" : ""
-                  }`}
-                  placeholder="https://example.com/product"
-                  required
-                />
-                <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                {isScrapingLoading && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
-                  </div>
-                )}
-              </div>
-              {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Size
-                </label>
-                <input
-                  type="text"
-                  name="size"
-                  value={formData.size}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Color
-                </label>
-                <input
-                  type="text"
-                  name="color"
-                  value={formData.color}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Quantity
-              </label>
-              <input
-                type="number"
-                name="quantity"
-                value={formData.quantity}
-                onChange={handleInputChange}
-                min="1"
-                className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200"
-              />
-            </div>
-          </motion.div>
-        );
-      case 2:
-        return (
-          <motion.div
-            key="step2"
-            custom={direction}
-            variants={slideVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ duration: 0.2 }}
-            className="space-y-4"
-          >
-            {isAdminOrWorker ? (
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                  Search Customer
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200"
-                    placeholder="Search by name or phone number..."
-                  />
-                  {isDropdownOpen && customers.length > 0 && (
-                    <div className="absolute z-50 mt-1 w-full rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
-                      <div className="max-h-60 overflow-auto py-1">
-                        {customers.map((customer) => (
-                          <button
-                            key={customer.id}
-                            onClick={() => {
-                              setFormData((prev) => ({
-                                ...prev,
-                                customer: customer.id.toString(),
-                              }));
-                              setSearchTerm(
-                                `${customer.name} (${customer.phoneNumber})`
-                              );
-                              setIsDropdownOpen(false);
-                            }}
-                            className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700"
-                          >
-                            <div className="font-medium text-gray-900 dark:text-white">
-                              {customer.name}
-                            </div>
-                            <div className="text-sm text-gray-500 dark:text-gray-400">
-                              {customer.phoneNumber}
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-                {formData.customer && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Selected customer ID: {formData.customer}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
-                <div className="flex items-center gap-4">
-                  <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-full bg-gradient-to-r from-orange-400 to-orange-600">
-                    <span className="absolute inset-0 flex items-center justify-center text-base font-medium text-white">
-                      {user?.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
-                    </span>
-                  </div>
-                  <div className="flex-grow">
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                      {user?.name}
-                    </h3>
-                    <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
-                      <Phone className="h-4 w-4" />
-                      {user?.phoneNumber}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Notes
-              </label>
-              <textarea
-                name="notes"
-                value={formData.notes}
-                onChange={handleInputChange}
-                style={{ resize: "none" }}
-                rows={4}
-                className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200"
-              />
-            </div>
-          </motion.div>
-        );
-      default:
-        return null;
-    }
-  };
-
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-3xl shadow-lg">
-        <div className="relative p-6">
-          <button
-            onClick={onClose}
-            className="absolute right-6 top-6 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+      <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        {showSuccess ? (
+          <motion.div
+            initial={{ scale: 0.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="p-6 text-center space-y-4"
           >
-            <X className="w-5 h-5" />
-          </button>
-
-          {showSuccess ? (
             <motion.div
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.2 }}
-              className="flex flex-col items-center justify-center py-12"
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
             >
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-              >
-                <CheckCircle2 className="w-16 h-16 text-green-500" />
-              </motion.div>
-              <motion.h2
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="mt-4 text-xl font-semibold text-gray-900 dark:text-white"
-              >
-                Order Created Successfully
-              </motion.h2>
+              <CheckCircle2 className="w-20 h-20 text-primary mx-auto" />
             </motion.div>
-          ) : (
-            <form onSubmit={handleSubmit}>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
-                Add New Order
-              </h2>
+            <motion.h2
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="text-2xl font-bold text-gray-900 dark:text-white"
+            >
+              Order Created Successfully!
+            </motion.h2>
+          </motion.div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Add New Order</h2>
+              <button
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-              {/* Progress Steps */}
-              <div className="flex justify-between mb-8">
-                {STEPS.map((step) => (
+            <form onSubmit={handleSubmit} className="p-6 space-y-6">
+              {/* Product Details Section */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-200 flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
+                  <Package className="w-4 h-4" />
+                  Product Details
+                </h3>
+
+                <div className="space-y-4">
+                  {/* Image Upload Area */}
                   <div
-                    key={step.id}
-                    className={`flex flex-col items-center ${
-                      currentStep >= step.id
-                        ? "text-primary"
-                        : "text-gray-400 dark:text-gray-500"
+                    className={`border-2 border-dashed rounded-xl p-4 text-center ${
+                      dragActive
+                        ? "border-primary bg-primary/5"
+                        : "border-gray-300 dark:border-gray-600"
                     }`}
+                    onDragEnter={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDragOver={handleDrag}
+                    onDrop={handleDrop}
                   >
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 transition-colors duration-200 ${
-                        currentStep >= step.id
-                          ? "bg-primary/10"
-                          : "bg-gray-100 dark:bg-gray-700"
-                      }`}
-                    >
-                      <step.icon className="w-4 h-4" />
-                    </div>
-                    <span className="text-[10px] font-medium">
-                      {step.title}
-                    </span>
+                    {uploadedImage ? (
+                      <div className="relative w-full aspect-video rounded-lg overflow-hidden">
+                        <Image
+                          src={uploadedImage}
+                          alt="Product"
+                          fill
+                          className="object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setUploadedImage(null)}
+                          className="absolute top-2 right-2 p-1 rounded-full bg-white/80 hover:bg-white text-gray-600"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="py-4">
+                        <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Drag and drop your image here, or{" "}
+                          <label className="text-primary hover:text-primary-dark cursor-pointer">
+                            browse
+                            <input
+                              type="file"
+                              className="hidden"
+                              accept="image/*"
+                              onChange={handleFileChange}
+                            />
+                          </label>
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          JPG, PNG, GIF (Max 5MB)
+                        </p>
+                      </div>
+                    )}
                   </div>
-                ))}
+
+                  {/* Product Link */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                      Product Link
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="url"
+                        name="productLink"
+                        value={formData.productLink}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                        placeholder="https://example.com/product"
+                      />
+                      {isScrapingLoading && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Product Title */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                      Product Title
+                    </label>
+                    <input
+                      type="text"
+                      name="title"
+                      value={formData.title}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                      placeholder="Enter product title"
+                    />
+                  </div>
+
+                  {/* Size and Color */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                        Size
+                      </label>
+                      <input
+                        type="text"
+                        name="size"
+                        value={formData.size}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                        placeholder="e.g. XL, 42, etc."
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                        Color
+                      </label>
+                      <input
+                        type="text"
+                        name="color"
+                        value={formData.color}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                        placeholder="e.g. Red, Blue, etc."
+                      />
+                    </div>
+                  </div>
+
+                  {/* Quantity */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                      Quantity
+                    </label>
+                    <input
+                      type="number"
+                      name="quantity"
+                      value={formData.quantity}
+                      onChange={handleInputChange}
+                      min="1"
+                      className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                    />
+                  </div>
+
+                  {/* Notes */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                      Notes
+                    </label>
+                    <textarea
+                      name="notes"
+                      value={formData.notes}
+                      onChange={handleInputChange}
+                      rows={3}
+                      className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                      placeholder="Any additional notes..."
+                    />
+                  </div>
+                </div>
               </div>
 
-              {/* Form Steps */}
-              <AnimatePresence mode="wait" custom={direction}>
-                {renderStep()}
-              </AnimatePresence>
+              {/* Customer Info Section (Only for Admin/Worker) */}
+              {isAdminOrWorker && (
+                <div className="space-y-4">
+                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-200 flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
+                    <User className="w-4 h-4" />
+                    Customer Information
+                  </h3>
 
-              {error && (
-                <p className="mt-4 text-sm text-red-500 dark:text-red-400">
-                  {error}
-                </p>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                      Search Customer
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 focus:border-primary dark:focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                        placeholder="Search by name or phone number"
+                      />
+                      {isDropdownOpen && customers.length > 0 && (
+                        <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg">
+                          {customers.map((customer) => (
+                            <div
+                              key={customer.id}
+                              onClick={() => {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  customer: customer.id.toString(),
+                                }));
+                                setSearchTerm(
+                                  `${customer.name} (${customer.phoneNumber})`
+                                );
+                                setIsDropdownOpen(false);
+                              }}
+                              className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
+                            >
+                              <div>
+                                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                  {customer.name}
+                                </p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  {customer.phoneNumber}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               )}
 
-              <div className="mt-6 flex justify-between">
-                {currentStep > 1 && (
-                  <button
-                    type="button"
-                    onClick={handleBack}
-                    className="px-6 py-2.5 text-sm font-medium rounded-xl border-2 border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all duration-200"
-                  >
-                    Back
-                  </button>
-                )}
+              {error && (
+                <p className="text-sm text-red-500 dark:text-red-400">{error}</p>
+              )}
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 rounded-xl transition-colors duration-200"
+                >
+                  Cancel
+                </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`px-6 py-2.5 text-sm font-medium rounded-xl border-2 border-primary text-white bg-orange-500 hover:bg-orange-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
-                    currentStep === 1 ? "ml-auto" : ""
-                  }`}
+                  className="px-4 py-2.5 text-sm font-medium text-white bg-primary hover:bg-primary-dark active:bg-primary-darker rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 ease-in-out transform hover:-translate-y-0.5"
                 >
-                  {loading
-                    ? "Creating..."
-                    : currentStep === STEPS.length
-                    ? "Create Order"
-                    : "Next"}
+                  {loading ? "Creating..." : "Create Order"}
                 </button>
               </div>
             </form>
-          )}
-        </div>
+          </>
+        )}
       </div>
     </div>
   );
